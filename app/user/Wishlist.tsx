@@ -47,9 +47,16 @@ const Favorites = () => {
     );
   };
 
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#333333" />
+        </TouchableOpacity>
         <Text style={styles.header}>Danh sách yêu thích</Text>
       </View>
       {items.length > 0 ? (
@@ -81,11 +88,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8F8',
   },
   headerContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 20,
+    paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
+  },
+  backButton: {
+    marginRight: 15,
   },
   header: {
     fontSize: 22,

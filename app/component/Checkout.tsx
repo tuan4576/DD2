@@ -39,14 +39,9 @@ const Checkout = ({navigation} : {navigation : any}) => {
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Thanh toán</Text>
-        <View style={styles.bagIconContainer}>
-          <View style={styles.bagIconCircle}>
-            <Icon name="bag-handle-outline" size={24} color="#000" />
-          </View>
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationText}>2</Text>
-          </View>
-        </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+          <Icon name="close" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
       {/* Phần Phương thức thanh toán */}
@@ -116,36 +111,6 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 24,
-    fontWeight: 'bold',
-  },
-  bagIconContainer: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-  },
-  bagIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF937B',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  notificationText: {
-    color: 'white',
-    fontSize: 12,
     fontWeight: 'bold',
   },
   sectionTitleContainer: {

@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ScrollView, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import ViewShot from 'react-native-view-shot';
 
 const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) => {
   const order = route?.params?.order || {
@@ -13,6 +13,10 @@ const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) =>
     items: []
   };
 
+  const receiptRef = useRef<ViewShot>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
   const DashedLine = () => (
     <View style={styles.dashedLine}>
       {[...Array(50)].map((_, i) => (
@@ -21,61 +25,43 @@ const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) =>
     </View>
   );
 
-  const handleDownload = async () => {
+  const handleScreenshot = async () => {
     try {
-      const currentDate = new Date().toISOString().split('T')[0];
-      // Tạo nội dung cho file hóa đơn
-      const invoiceContent = `
-=======================================================
-                 HÓA ĐƠN BÁN HÀNG
-=======================================================
-
-Mã đơn hàng: ${order.id}
-Ngày: ${order.date}
-
--------------------------------------------------------
-Sản phẩm         SL       Đơn giá     Thành tiền
--------------------------------------------------------
-
-${order.items.map((item: any) => 
-  `${item.name.padEnd(15)} ${item.quantity.toString().padStart(2)}     ${item.price.padStart(9)}đ ${(parseInt(item.price.replace(',', '')) * item.quantity).toString().padStart(11)}đ`
-).join('\n')}
--------------------------------------------------------
-
-Tổng cộng:              ${order.total.padStart(23)}đ
-
-Trạng thái: ${order.status}
-
-=======================================================
-             Cảm ơn quý khách đã mua hàng!
-=======================================================
-
-
-      `;
-
-      // Tạo tên file dựa trên ngày hiện tại
-      const fileName = `hoadon_${currentDate}.txt`;
-
-      // Đường dẫn đến file trong bộ nhớ tạm của ứng dụng
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
-
-      // Ghi nội dung vào file
-      await FileSystem.writeAsStringAsync(filePath, invoiceContent);
-
-      // Kiểm tra xem thiết bị có hỗ trợ chia sẻ không
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert("Chia sẻ không khả dụng", "Thiết bị của bạn không hỗ trợ chia sẻ file.");
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Quyền truy cập bị từ chối', 'Vui lòng cấp quyền truy cập thư viện ảnh để lưu ảnh chụp màn hình.');
         return;
       }
 
-      // Chia sẻ file
-      await Sharing.shareAsync(filePath, { dialogTitle: 'Tải xuống hóa đơn' });
+      if (receiptRef.current) {
+        const uri = await receiptRef.current.capture();
+        const asset = await MediaLibrary.createAssetAsync(uri);
+        const album = await MediaLibrary.getAlbumAsync('Hóa đơn');
+        if (album === null) {
+          await MediaLibrary.createAlbumAsync('Hóa đơn', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
 
-      Alert.alert('Thất bại', 'Hóa đơn đã được tạo. Vui lòng chọn nơi lưu trữ.');
+        setCapturedImage(uri);
 
+        Alert.alert(
+          'Thành công',
+          'Hóa đơn đã được lưu vào thư viện ảnh.',
+          [
+            { text: 'OK' },
+            { 
+              text: 'Xem ảnh', 
+              onPress: () => setIsModalVisible(true)
+            },
+          ]
+        );
+      } else {
+        console.error('ReceiptRef is null');
+      }
     } catch (error) {
-      console.error('Lỗi khi tạo hóa đơn:', error);
-      Alert.alert('Lỗi', 'Không thể tạo hóa đơn. Vui lòng thử lại sau.');
+      console.error('Lỗi khi chụp màn hình:', error);
+      Alert.alert('Lỗi', 'Không thể chụp và lưu màn hình. Vui lòng thử lại sau.');
     }
   };
 
@@ -86,65 +72,97 @@ Trạng thái: ${order.status}
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.header}>HÓA ĐƠN BÁN HÀNG</Text>
-        <TouchableOpacity onPress={handleDownload} style={styles.downloadButton}>
-          <Ionicons name="download-outline" size={24} color="#000" />
+        <TouchableOpacity onPress={handleScreenshot} style={styles.saveButton}>
+          <Ionicons name="camera-outline" size={24} color="#000" />
         </TouchableOpacity>
       </View>
       
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Mã đơn hàng:</Text>
-        <Text style={styles.value}>{order.id}</Text>
-      </View>
-      
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Ngày:</Text>
-        <Text style={styles.value}>{order.date}</Text>
-      </View>
-      
-      <DashedLine />
-      
-      <View style={styles.tableHeader}>
-        <Text style={styles.columnHeader}>Sản phẩm</Text>
-        <Text style={styles.columnHeader}>SL</Text>
-        <Text style={styles.columnHeader}>Đơn giá</Text>
-        <Text style={styles.columnHeader}>Thành tiền</Text>
-      </View>
-      
-      {order.items.map((item: any, index: number) => (
-        <View key={index} style={styles.tableRow}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemQuantity}>{item.quantity}</Text>
-          <Text style={styles.itemPrice}>{item.price}đ</Text>
-          <Text style={styles.itemTotal}>{parseInt(item.price.replace(',', '')) * item.quantity}đ</Text>
+      <ScrollView>
+        <ViewShot ref={receiptRef} options={{ format: "png", quality: 0.9 }}>
+          <View style={styles.receipt}>
+            <View style={styles.orderInfo}>
+              <Text style={styles.label}>Mã đơn hàng:</Text>
+              <Text style={styles.value}>{order.id}</Text>
+            </View>
+            
+            <View style={styles.orderInfo}>
+              <Text style={styles.label}>Ngày:</Text>
+              <Text style={styles.value}>{order.date}</Text>
+            </View>
+            
+            <DashedLine />
+            
+            <View style={styles.tableHeader}>
+              <Text style={styles.columnHeader}>Sản phẩm</Text>
+              <Text style={styles.columnHeader}>SL</Text>
+              <Text style={styles.columnHeader}>Đơn giá</Text>
+              <Text style={styles.columnHeader}>Thành tiền</Text>
+            </View>
+            
+            {order.items.map((item: any, index: number) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemQuantity}>{item.quantity}</Text>
+                <Text style={styles.itemPrice}>{item.price}đ</Text>
+                <Text style={styles.itemTotal}>{parseInt(item.price.replace(',', '')) * item.quantity}đ</Text>
+              </View>
+            ))}
+            
+            <DashedLine />
+            
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Tổng cộng:</Text>
+              <Text style={styles.totalValue}>{order.total}đ</Text>
+            </View>
+            
+            <Text style={styles.status}>Trạng thái: {order.status}</Text>
+            
+            <DashedLine />
+            
+            <Text style={styles.footer}>Cảm ơn quý khách đã mua hàng!</Text>
+          </View>
+        </ViewShot>
+      </ScrollView>
+
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {capturedImage && (
+              <Image
+                source={{ uri: capturedImage }}
+                style={styles.capturedImage}
+                resizeMode="contain"
+              />
+            )}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      ))}
-      
-      <DashedLine />
-      
-      <View style={styles.total}>
-        <Text style={styles.totalLabel}>Tổng cộng:</Text>
-        <Text style={styles.totalValue}>{order.total}đ</Text>
-      </View>
-      
-      <Text style={styles.status}>Trạng thái: {order.status}</Text>
-      
-      <DashedLine />
-      
-      <Text style={styles.footer}>Cảm ơn quý khách đã mua hàng!</Text>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flex: 1,
     backgroundColor: '#fff',
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   backButton: {
     padding: 10,
@@ -155,8 +173,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-  downloadButton: {
+  saveButton: {
     padding: 10,
+  },
+  receipt: {
+    padding: 20,
+    backgroundColor: '#fff',
   },
   orderInfo: {
     flexDirection: 'row',
@@ -232,6 +254,32 @@ const styles = StyleSheet.create({
     marginTop: 30,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  capturedImage: {
+    width: 300,
+    height: 400,
+    marginBottom: 20,
+  },
+  closeButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 

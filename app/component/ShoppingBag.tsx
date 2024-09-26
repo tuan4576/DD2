@@ -26,14 +26,7 @@ const ShoppingBag = ({navigation} : {navigation : any}) => {
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Giỏ hàng</Text>
-        <View style={styles.bagIconContainer}>
-          <View style={styles.bagIconCircle}>
-            <Icon name="bag-handle-outline" size={24} color="#000" />
-          </View>
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationText}>2</Text>
-          </View>
-        </View>
+        <View style={styles.placeholder} />
       </View>
 
       <View style={styles.itemsContainer}>
@@ -183,32 +176,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  bagIconContainer: {
-    position: 'relative',
-  },
-  bagIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF937B',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+  placeholder: {
+    width: 24,
   },
   itemsContainer: {
     marginBottom: 20,
