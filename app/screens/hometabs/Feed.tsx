@@ -1,8 +1,46 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, FlatList, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import Swiper from 'react-native-swiper';
 
+import Swiper from 'react-native-swiper';
+import ItemProduct from './items/itemProduct';
+import ItemCategory from './items/itemCategory';
+import { GET_ALL, GET_IMG, GET_CATEGORIES } from "../../api/apiService"; 
+import ItemSearch from './items/itemSearch';
+import ItemHeader from './items/itemHeader';
+
+interface ItemProps {
+  navigation: any;
+  photo: string;
+  name: string;
+  price: string;
+  status: string;
+  details: string;
+  description: string;
+}
+
+interface CategoryProps {
+  id: string;
+  name: string;
+}
+
+const Item: React.FC<ItemProps> = ({ navigation, photo, name, price, status, details, description }) => (
+  <ItemProduct 
+    navigation={navigation}
+    photo={{ uri: GET_IMG(photo) }}
+    name={name}
+    price={price}
+    status={status}
+    details={details}
+    description={description}
+  />
+);
+
+const Category: React.FC<CategoryProps> = ({ id, name }) => (
+  <ItemCategory 
+    id={id}
+    name={name}
+  />
+);
 const data = [
   { id: '1', title: 'Áo khoác bomber', price: '1.200.000đ', image: require('../../asset/image/Clothing01.png') },
   { id: '2', title: 'Áo khoác da', price: '1.500.000đ', image: require('../../asset/image/Clothing02.png') },
@@ -11,7 +49,6 @@ const data = [
   // Thêm sản phẩm khác nếu cần
 ];
 
-const categories = ['Tất cả', 'Áo khoác', 'Quần jean', 'Giày', 'Áo thun', 'Áo hoodie', 'Phụ kiện'];
 
 const bannerData = [
   { id: '1', image: require('../../asset/image/hinh01.jpeg') },
@@ -68,13 +105,73 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
       </View>
     </View>
   );
-
-  const renderCategory = ({ item }: { item: string }) => (
-    <TouchableOpacity style={styles.categoryButton}>
-      <Text style={styles.categoryText}>{item}</Text>
-    </TouchableOpacity>
-  );
-
+  // const [coffeeData, setCoffeeData] = useState([]); 
+  const [products, setProducts] = useState([]);
+  const [categories, setCategory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); 
+  useEffect(() => { 
+    GET_ALL("products") 
+      .then((response) => { 
+        console.log("Response từ API:", response);
+        if (!response || !response.data) {
+          console.error("Response or response.data is undefined", response);
+          return;
+        }
+        const responseData = response.data;
+        if (Array.isArray(responseData)) { 
+          setProducts(responseData as any[]); 
+          // console.log('Coffee data:', responseData);
+        } else if (typeof responseData === 'object') {
+          const arrayData = Object.values(responseData).find(value => Array.isArray(value));
+          if (arrayData) {
+            setProducts(arrayData as any[]);
+            console.log('Coffee data:', arrayData);
+          } else {
+            console.error("Data received from the API is not in a supported format.");
+            setProducts([]);
+          }
+        } else { 
+          console.error("Data received from the API is not in a supported format."); 
+          setProducts([]);
+        }
+      }) 
+      .catch((error) => { 
+        console.error("Error fetching data: ", error); 
+        setProducts([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      }); 
+  }, []); 
+  useEffect(() => {
+    GET_CATEGORIES("categories")
+      .then((response) => {
+        console.log("Categories response:", response);
+        if (response && response.data) {
+          if (Array.isArray(response.data)) {
+            setCategory(response.data);
+          } else if (typeof response.data === 'object') {
+            const categoryArray = Object.values(response.data).find(value => Array.isArray(value));
+            if (categoryArray) {
+              setCategory(categoryArray);
+            } else {
+              console.error("Category data is not in a supported format.");
+              setCategory([]);
+            }
+          } else {
+            console.error("Category data is not in a supported format.");
+            setCategory([]);
+          }
+        } else {
+          console.error("Invalid category response:", response);
+          setCategory([]);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching categories:", error);
+        setCategory([]);
+      });
+  }, []);
   return (  
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -93,33 +190,11 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <Image source={require('../../asset/image/Avatar.png')} style={styles.avatarImage} />
-            <Text style={styles.greeting}>Xin chào, Selina!</Text>
-          </View>
-          <View style={styles.iconContainer}>
-            <TouchableOpacity 
-              style={[styles.iconWrapper, styles.bagIcon]}
-              onPress={() => navigation.navigate('ShoppingBag')}
-            >
-              <Icon name="bag-handle-outline" size={28} color="#000" />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationText}>2</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ItemHeader navigation={navigation}/>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Icon name="search-outline" size={20} color="#aaa" />
-          <TextInput style={styles.searchInput} placeholder="Bạn đang tìm gì..." />
-          <TouchableOpacity style={styles.filterButton}>
-            <Icon name="filter-outline" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-
+        <ItemSearch/>
+        
         {/* Promo Banner */}
         <View style={styles.swiperContainer}>
           <Swiper
@@ -138,39 +213,36 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         {/* Category Filter */}
-        <FlatList
-          data={categories}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryFilter}
-        />
-
+         <ScrollView
+           horizontal
+           showsHorizontalScrollIndicator={false}
+           style={styles.categoryScrollView}
+           contentContainerStyle={styles.categoryContainer}
+         >
+           {categories.map((category) => (
+             <ItemCategory 
+               key={category.id}
+               id={category.id}
+               name={category.name}
+             />
+           ))}
+         </ScrollView>
         {/* Product List */}
         <View style={styles.productList}>
-          {data.map((item, index) => (
-            <TouchableOpacity
+          {products.map((item) => (
+            <Item
               key={item.id}
-              style={styles.productCard}
-              onPress={() => navigation.navigate('ProductDetails', { product: item })}
-            >
-              <Image source={item.image} style={styles.productImage} />
-              <TouchableOpacity style={styles.heartIconContainer}>
-                <Icon name="heart-outline" size={20} color="#000" />
-              </TouchableOpacity>
-              <View style={styles.productDetails}>
-                <Text style={styles.productTitle}>{item.title}</Text>
-                <View style={styles.priceCartContainer}>
-                  <Text style={styles.productPrice}>{item.price}</Text>
-                  <TouchableOpacity style={styles.cartIconContainer}>
-                    <Icon name="cart-outline" size={20} color="#000" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
+              navigation={navigation}
+              photo={item.photo}
+              name={item.name}
+              price={item.price}
+              status={item.status}
+              details={item.details}
+              description={item.description}
+            />
           ))}
         </View>
+         
       {/* New Products Introduction */}
       <View style={styles.newProductsContainer}>
           <Text style={styles.sectionTitle}>Sản phẩm mới ra mắt</Text>
@@ -245,6 +317,25 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
+  productCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    width: '48%',
+    position: 'relative',
+  },
+
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    paddingHorizontal: 16,
+    overflow: 'scroll',
+  },
+  categoryScrollView: {
+    flexGrow: 0,
+  },
+  
+
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -253,156 +344,9 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 50,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 10,
-    paddingHorizontal: 16,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  greeting: {
-    marginLeft: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  bagIcon: {
-    marginLeft: 10,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF937B',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 15,
-    marginVertical: 10,
-    marginHorizontal: 16,
-  },
-  searchInput: {
-    marginLeft: 10,
-    fontSize: 16,
-    flex: 1,
-  },
-  filterButton: {
-    padding: 5,
-  },
-  swiperContainer: {
-    height: 180,
-    marginVertical: 10,
-    marginHorizontal: 16,
-  },
-  slide: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  promoBannerImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  categoryFilter: {
-    marginVertical: 10,
-    paddingHorizontal: 16,
-  },
-  categoryButton: {
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  categoryText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  newProductsContainer: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  newProductItem: {
-    width: 250,
-    marginRight: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 10,
-  },
-  newProductImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 10,
-  },
-  newProductDetails: {
-    marginTop: 10,
-  },
-  newProductTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  newProductPrice: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  newProductDescription: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 5,
-  },
-  productList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  productCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    width: '48%',
-    position: 'relative',
-  },
+  
+  
+
   productImage: {
     width: '100%',
     height: 180,
@@ -446,6 +390,63 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+
+  swiperContainer: {
+    height: 180,
+    marginVertical: 10,
+    marginHorizontal: 16,
+  },
+  slide: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  promoBannerImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  newProductsContainer: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  newProductItem: {
+    width: 250,
+    marginRight: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 10,
+  },
+  newProductImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+  },
+  newProductDetails: {
+    marginTop: 10,
+  },
+  newProductTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  newProductPrice: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  newProductDescription: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+  },
+
+
+  
   recentlyViewedContainer: {
     marginTop: 20,
     paddingHorizontal: 16,
@@ -480,6 +481,12 @@ const styles = StyleSheet.create({
   recentlyViewedPrice: {
     fontSize: 12,
     color: '#666',
+  },
+  productList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
 });
 

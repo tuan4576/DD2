@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, BackHandler, ToastAndroid, View, Dimensions, TouchableOpacity, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,10 +6,12 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Svg, { Path } from 'react-native-svg';
 
-import Feed from './hometab/Feed';
-import Notifications from './hometab/Notifications';
-import Profile from './hometab/Profile';
-import QR from './hometab/QR';
+import Feed from './hometabs/Feed';
+import Notifications from './hometabs/Notifications';
+import Profile from './hometabs/Profile';
+import QR from './hometabs/QR';
+
+import { GET_ALL, GET_IMG } from "../api/apiService"; 
 
 const Tab = createBottomTabNavigator();
 
@@ -90,6 +92,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: {
 const HomeScreen = ({navigation} : {navigation : any}) => {
   const backPressedOnce = useRef(false);
   const lastBackPressTime = useRef(0);
+
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);

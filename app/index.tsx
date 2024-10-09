@@ -6,6 +6,8 @@ import DetailsScreen from './screens/DetailsScreen';
 import SignInScreen from './screens/SignInScreen';
 import SignUpScreen from './screens/SignUpScreen';
 
+import ItemProductDetail from './screens/hometabs/Detail/ProductDetail';
+
 import ProductDetails from './component/ProductDetails';
 import ShoppingBag from './component/ShoppingBag';
 import Checkout from './component/Checkout';
@@ -22,15 +24,22 @@ import PaymentMethod from './user/PaymentMethod';
 import Setting from './user/Setting';
 import Support from './user/Support';
 import StoreMap from './user/StoreMap';
+import Zoom from './screens/hometabs/component/Zoom';
+// import Test from './screens/hometabs/items/test';
 const Stack = createNativeStackNavigator();
 const index = () => {
   return (
     <NavigationContainer independent={true}>
-      <Stack.Navigator initialRouteName="SignIn">
+      {/* <Stack.Navigator initialRouteName="SignIn"> */}
+      {/* <Stack.Navigator initialRouteName="Test"> */}
+      <Stack.Navigator initialRouteName="Home">
+        {/* <Stack.Screen name="Test" component={Test}  options={{headerShown:false}}/> */}
         <Stack.Screen name="SignIn" component={SignInScreen}  options={{headerShown:false}}/>
         <Stack.Screen name="SignUp" component={SignUpScreen}  options={{headerShown:false}}/> 
         <Stack.Screen name="Home" component={HomeScreen} options={{headerShown:false}} />
         <Stack.Screen name="Details" component={DetailsScreen}  options={{headerShown:false}}/>
+        <Stack.Screen name="ItemProductDetail" component={ItemProductDetail} options={{headerShown:false}}/>
+
         <Stack.Screen name="ProductDetails" component={ProductDetails}  options={{headerShown:false}}/>
         <Stack.Screen name="ShoppingBag" component={ShoppingBag}  options={{headerShown:false}}/>
         <Stack.Screen name="Checkout" component={Checkout}  options={{headerShown:false}}/>
@@ -47,6 +56,9 @@ const index = () => {
         <Stack.Screen name="Setting" component={Setting}  options={{headerShown:false}}/>
         <Stack.Screen name="Support" component={Support}  options={{headerShown:false}}/>
         <Stack.Screen name="StoreMap" component={StoreMap}  options={{headerShown:false}}/>
+
+        <Stack.Screen name="Zoom" component={Zoom}  options={{headerShown:false}}/>
+
       </Stack.Navigator>
     </NavigationContainer>
   )
