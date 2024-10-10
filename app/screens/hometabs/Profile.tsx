@@ -40,10 +40,21 @@
 //   });
 
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Profile = ({navigation} : {navigation : any}) => {
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken');
+      navigation.navigate('SignIn');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -84,7 +95,7 @@ const Profile = ({navigation} : {navigation : any}) => {
 
       <TouchableOpacity 
         style={styles.logoutButton}
-        onPress={() => navigation.navigate('SignIn')}
+        onPress={handleLogout}
       >
         <Text style={styles.logoutText}>Đăng xuất</Text>
       </TouchableOpacity>

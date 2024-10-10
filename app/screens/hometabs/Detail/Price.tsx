@@ -7,12 +7,17 @@ interface PriceProps {
 }
 
 const Price: React.FC<PriceProps> = ({ price }) => {
+  const formatPrice = (price: string) => {
+    if (!price) return '0';
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
   return (
     <View style={styles.priceContainer}>
       <Icon name="pricetag-outline" size={24} color="#FF6347" style={styles.priceIcon} />
       <View style={styles.priceTextContainer}>
         <Text style={styles.priceLabel}>Giá bán:</Text>
-        <Text style={styles.productPrice}>{price} đ</Text>
+        <Text style={styles.productPrice}>{formatPrice(price)} đ</Text>
       </View>
     </View>
   );

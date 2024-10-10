@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -7,40 +7,80 @@ function ItemSearch() {
   const fullPlaceholder = 'Bạn đang cần tìm gì...';
   const [index, setIndex] = useState(0);
   const [showCursor, setShowCursor] = useState(true);
+  const [isTyping, setIsTyping] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    const typingInterval = setInterval(() => {
-      if (index < fullPlaceholder.length) {
-        setPlaceholder(prevPlaceholder => prevPlaceholder + fullPlaceholder[index]);
-        setIndex(prevIndex => prevIndex + 1);
-      } else {
-        clearInterval(typingInterval);
-        setTimeout(() => {
-          setPlaceholder('');
-          setIndex(0);
-        }, 1000);
-      }
-    }, 100);
+    let interval;
+    let cursorInterval;
 
-    const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev);
-    }, 500);
+    if (!isFocused) {
+      interval = setInterval(() => {
+        if (isTyping) {
+          if (index < fullPlaceholder.length) {
+            setPlaceholder(prevPlaceholder => prevPlaceholder + fullPlaceholder[index]);
+            setIndex(prevIndex => prevIndex + 1);
+          } else {
+            setIsTyping(false);
+            setTimeout(() => {
+              setIndex(fullPlaceholder.length - 1);
+            }, 1000);
+          }
+        } else {
+          if (index >= 0) {
+            setPlaceholder(prevPlaceholder => prevPlaceholder.slice(0, -1));
+            setIndex(prevIndex => prevIndex - 1);
+          } else {
+            setIsTyping(true);
+            setIndex(0);
+          }
+        }
+      }, 100);
+
+      cursorInterval = setInterval(() => {
+        setShowCursor(prev => !prev);
+      }, 500);
+    }
 
     return () => {
-      clearInterval(typingInterval);
+      clearInterval(interval);
       clearInterval(cursorInterval);
     };
-  }, [index]);
+  }, [index, isTyping, isFocused]);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    setPlaceholder('');
+  };
+
+  const handleBlur = () => {
+    if (inputText === '') {
+      setIsFocused(false);
+      setIndex(0);
+      setIsTyping(true);
+    }
+  };
 
   return (
     <View style={styles.searchContainer}>
       <Icon name="search-outline" size={20} color="#aaa" />
       <View style={styles.inputContainer}>
-        <Text style={styles.placeholderText}>
-          {placeholder}
-          {showCursor && <Text style={styles.cursor}>|</Text>}
-        </Text>
-        <TextInput style={styles.searchInput} />
+        {!isFocused && inputText === '' && (
+          <Text style={styles.placeholderText}>
+            {placeholder}
+            {showCursor && <Text style={styles.cursor}>|</Text>}
+          </Text>
+        )}
+        <TextInput
+          ref={inputRef}
+          style={styles.searchInput}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          value={inputText}
+          onChangeText={setInputText}
+        />
       </View>
       <TouchableOpacity style={styles.filterButton}>
         <Icon name="filter-outline" size={20} color="#000" />
@@ -75,13 +115,13 @@ const styles = StyleSheet.create({
   searchInput: {
     fontSize: 16,
     flex: 1,
-    color: 'transparent',
+    color: '#000',
   },
   filterButton: {
     padding: 5,
   },
   cursor: {
-    color: '#4A90E2', // A vibrant blue color
+    color: '#4A90E2',
   },
 });
 

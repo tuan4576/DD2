@@ -9,7 +9,7 @@ import SignUpScreen from './screens/SignUpScreen';
 import ItemProductDetail from './screens/hometabs/Detail/ProductDetail';
 
 import ProductDetails from './component/ProductDetails';
-import ShoppingBag from './component/ShoppingBag';
+import ShoppingBag from './screens/hometabs/items/Cart/Cart';
 import Checkout from './component/Checkout';
 import AddAdress from './component/AddAdress';
 import OrderSuccess from './component/OrderSuccess';
@@ -25,16 +25,16 @@ import Setting from './user/Setting';
 import Support from './user/Support';
 import StoreMap from './user/StoreMap';
 import Zoom from './screens/hometabs/component/Zoom';
-// import Test from './screens/hometabs/items/test';
+import Test from './screens/hometabs/items/test';
 const Stack = createNativeStackNavigator();
 const index = () => {
   return (
     <NavigationContainer independent={true}>
-      {/* <Stack.Navigator initialRouteName="SignIn"> */}
       {/* <Stack.Navigator initialRouteName="Test"> */}
-      <Stack.Navigator initialRouteName="Home">
-        {/* <Stack.Screen name="Test" component={Test}  options={{headerShown:false}}/> */}
+      <Stack.Navigator initialRouteName="SignIn">
+      
         <Stack.Screen name="SignIn" component={SignInScreen}  options={{headerShown:false}}/>
+        <Stack.Screen name="Test" component={Test}  options={{headerShown:false}}/>
         <Stack.Screen name="SignUp" component={SignUpScreen}  options={{headerShown:false}}/> 
         <Stack.Screen name="Home" component={HomeScreen} options={{headerShown:false}} />
         <Stack.Screen name="Details" component={DetailsScreen}  options={{headerShown:false}}/>

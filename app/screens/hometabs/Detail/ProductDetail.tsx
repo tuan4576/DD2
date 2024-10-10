@@ -7,17 +7,21 @@ import Status from './Status';
 import Price from './Price';
 import Name from './Name';
 import Images from './Images';
+import { ADD_TO_CART } from '../../../api/apiService';
+
 const colors = ['#000000', '#4CAF50', '#6200EA', '#03A9F4']; // Các màu cho sản phẩm
 const sizes = ['S', 'M', 'L']; // Kích thước sản phẩm
 
 interface ProductParams {
   product: {
+    id: number;
     photo: any;
     name: string;
     price: string;
     status: string;
     details: string;
     description: string;
+    stock_id: number; // Thêm stock_id vào interface
   };
 }
 
@@ -25,7 +29,7 @@ const ProductDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { product } = route.params as ProductParams;
-  const { photo, name, price, status, details, description } = product;
+  const { id, photo, name, price, status, details, description, stock_id } = product;
 
   const [selectedColor, setSelectedColor] = useState('#000000'); // Màu được chọn
   const [selectedSize, setSelectedSize] = useState('M'); // Kích thước được chọn
@@ -57,6 +61,22 @@ const ProductDetailScreen = () => {
   const decrementQuantity = () => {
     if (quantity > 1) {
       setQuantity((prevQuantity) => prevQuantity - 1);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    try {
+      const cartData = {
+        quantity: quantity,
+        stock_id: stock_id
+      };
+      // console.log('Data being sent to cart:', cartData);
+      const response = await ADD_TO_CART('shopping-cart', cartData);
+      console.log('Product added to cart:', response);
+      // Handle success (e.g., show a success message, update cart count, etc.)
+    } catch (error) {
+      console.error('Failed to add product to cart:', error);
+      // Handle error (e.g., show an error message)
     }
   };
 
@@ -109,7 +129,7 @@ const ProductDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.addToCartButton}>
+          <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
             <Text style={styles.addToCartText}>Add to Cart</Text>
           </TouchableOpacity>
         </View>

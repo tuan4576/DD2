@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Animated, Dimensions, Platform, Alert, ScrollView, BackHandler } from 'react-native';
+import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Animated, Dimensions, Alert, ScrollView, BackHandler, RefreshControl, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { CommonActions } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LOGIN } from '../api/apiService';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs(['Lỗi đăng nhập:']); // Ignore log notification by message
+LogBox.ignoreAllLogs();
 
 const { width, height } = Dimensions.get('window');
 
@@ -15,6 +21,8 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
   const [message, setMessage] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const backPressedOnce = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const images = [
     require('../asset/image/Man.png'),
@@ -35,11 +43,28 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
 
+    // Load saved credentials if they exist
+    loadSavedCredentials();
+
     return () => {
       clearInterval(interval);
       backHandler.remove();
     };
   }, []);
+
+  const loadSavedCredentials = async () => {
+    try {
+      const savedEmail = await AsyncStorage.getItem('savedEmail');
+      const savedPassword = await AsyncStorage.getItem('savedPassword');
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.error('Error loading saved credentials:', error);
+    }
+  };
 
   const handleBackPress = () => {
     if (backPressedOnce.current) {
@@ -95,15 +120,44 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (!email || !password) {
       setMessage('Vui lòng điền đầy đủ thông tin');
       setIsVisible(true);
       setTimeout(() => setIsVisible(false), 3000);
       return;
     }
-    // Thêm logic xác thực đăng nhập ở đây
-    navigateToHome();
+    
+    try {
+      const response = await LOGIN('login', { email, password });
+      if (response && response.data) {
+        await AsyncStorage.setItem('userToken', response.data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+        
+        if (response.data.user && response.data.user.photo) {
+          await AsyncStorage.setItem('userAvatar', response.data.user.photo);
+        }
+        
+        if (rememberMe) {
+          await AsyncStorage.setItem('savedEmail', email);
+          await AsyncStorage.setItem('savedPassword', password);
+        } else {
+          await AsyncStorage.removeItem('savedEmail');
+          await AsyncStorage.removeItem('savedPassword');
+        }
+        
+        navigateToHome();
+      } else {
+        setMessage('Sai thông tin đăng nhập. Vui lòng kiểm tra lại.');
+        setIsVisible(true);
+        setTimeout(() => setIsVisible(false), 3000);
+      }
+    } catch (error) {
+      console.error('Lỗi đăng nhập:', error);
+      setMessage('Sai thông tin đăng nhập. Vui lòng kiểm tra lại.');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
+    }
   };
 
   const navigateToHome = () => {
@@ -115,104 +169,141 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
     );
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setEmail('');
+    setPassword('');
+    setMessage('');
+    setIsVisible(false);
+    setRememberMe(false);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
-        {images.map((image, index) => (
-          <Animated.Image
-            key={index}
-            source={image}
-            style={[
-              styles.backgroundImage,
-              { 
-                position: 'absolute', 
-                top: 0, 
-                transform: [
-                  { translateX: index === currentImageIndex ? slideAnim : (index === (currentImageIndex + 1) % images.length ? Animated.add(slideAnim, width) : width) }
-                ],
-              }
-            ]}
-          />
-        ))}
-      </View>
-      <View style={styles.overlay} />
-      <ScrollView contentContainerStyle={styles.loginContainer}>
-        <Text style={styles.title}>Đăng Nhập</Text>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập email của bạn"
-              placeholderTextColor="#999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              underlineColorAndroid="transparent"
-              value={email}
-              onChangeText={setEmail}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
+          {images.map((image, index) => (
+            <Animated.Image
+              key={index}
+              source={image}
+              style={[
+                styles.backgroundImage,
+                { 
+                  position: 'absolute', 
+                  top: 0, 
+                  transform: [
+                    { translateX: index === currentImageIndex ? slideAnim : (index === (currentImageIndex + 1) % images.length ? Animated.add(slideAnim, width) : width) }
+                  ],
+                }
+              ]}
             />
-            <Ionicons name="mail-outline" size={20} color="#808080" style={styles.icon} />
-          </View>
+          ))}
         </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Mật khẩu</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập mật khẩu của bạn"
-              placeholderTextColor="#999"
-              secureTextEntry={!showPassword}
-              underlineColorAndroid="transparent"
-              value={password}
-              onChangeText={setPassword}
+        <View style={styles.overlay} />
+        <ScrollView 
+          contentContainerStyle={styles.loginContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#ab4d4d']}
+              tintColor={'#fff'}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.icon}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#808080" />
+          }
+        >
+          <Text style={styles.title}>Đăng Nhập</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập email của bạn"
+                placeholderTextColor="#999"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                underlineColorAndroid="transparent"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <Ionicons name="mail-outline" size={20} color="#808080" style={styles.icon} />
+            </View>
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Mật khẩu</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu của bạn"
+                placeholderTextColor="#999"
+                secureTextEntry={!showPassword}
+                underlineColorAndroid="transparent"
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.icon}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#808080" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.rememberMeContainer}>
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              {rememberMe && <Ionicons name="checkmark" size={18} color="#fff" />}
+            </TouchableOpacity>
+            <Text style={styles.rememberMeText}>Ghi nhớ đăng nhập</Text>
+          </View>
+          <TouchableOpacity style={styles.button} onPress={handleSignIn}>
+            <Text style={styles.buttonText}>Đăng Nhập</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => {}}>
+            <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.orText}>hoặc đăng nhập bằng</Text>
+
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image source={require('../asset/image/google.png')} style={styles.socialIcon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.socialButton}>
+              <Image source={require('../asset/image/facebook.png')} style={styles.socialIcon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.socialButton} onPress={handleBiometricAuth}>
+              <Ionicons name="finger-print-outline" size={24} color="#808080" />
             </TouchableOpacity>
           </View>
-        </View>
-        <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-          <Text style={styles.buttonText}>Đăng Nhập</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.forgotPasswordButton} onPress={() => {}}>
-          <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-        </TouchableOpacity>
 
-        <Text style={styles.orText}>hoặc đăng nhập bằng</Text>
-
-        <View style={styles.socialContainer}>
-          <TouchableOpacity style={styles.socialButton}>
-            <Image source={require('../asset/image/google.png')} style={styles.socialIcon} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Image source={require('../asset/image/facebook.png')} style={styles.socialIcon} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton} onPress={handleBiometricAuth}>
-            <Ionicons name="finger-print-outline" size={24} color="#808080" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Bạn chưa có tài khoản?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={[styles.signUpText, styles.signUpLink]}>Đăng ký</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-      {isVisible && (
-        <View style={styles.messageContainer}>
-          <Text style={styles.messageText}>{message}</Text>
-        </View>
-      )}
-    </View>
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Bạn chưa có tài khoản?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <Text style={[styles.signUpText, styles.signUpLink]}>Đăng ký</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+        {isVisible && (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
 export default SignInScreen;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#6dafce',
+  },
   container: {
     flex: 1,
   },
@@ -264,6 +355,25 @@ const styles = StyleSheet.create({
   icon: {
     padding: 10,
   },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#fff',
+    borderRadius: 4,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rememberMeText: {
+    color: '#fff',
+    fontSize: 14,
+  },
   button: {
     backgroundColor: 'rgba(128, 128, 128, 0.7)',
     borderRadius: 8,
@@ -283,7 +393,6 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: '#fff',
     fontSize: 14,
-    textDecorationLine: 'underline',
   },
   orText: {
     fontSize: 14,

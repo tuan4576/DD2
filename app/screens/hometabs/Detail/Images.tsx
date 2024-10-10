@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, TouchableOpacity, Image, StyleSheet } from 'react-native'
+import { View, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native'
 import Icon from 'react-native-vector-icons/Ionicons'
 import { useNavigation } from '@react-navigation/native'
 import Zoom from '../component/Zoom'
@@ -15,9 +15,11 @@ function ProductImage({ photo }: ProductImageProps) {
     navigation.navigate('Zoom', { imageSource: photo })
   }
 
+  const screenWidth = Dimensions.get('window').width
+
   return (
     <View style={styles.imageContainer}>
-      <View style={styles.mainImageWrapper}>
+      <View style={[styles.mainImageWrapper, { width: screenWidth - 32 }]}>
         <Image source={photo} style={styles.productImage} />
         {/* Back Icon */}
         <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
@@ -31,18 +33,6 @@ function ProductImage({ photo }: ProductImageProps) {
         <TouchableOpacity style={styles.zoomIconContainer} onPress={handleZoom}>
           <Icon name="expand-outline" size={24} color="#000" />
         </TouchableOpacity>
-        {/* Product Thumbnails */}
-        {/* <View style={styles.thumbnailContainer}>
-          <View style={styles.thumbnailWrapper}>
-            <Image source={photo} style={styles.thumbnail} />
-          </View>
-          <View style={styles.thumbnailWrapper}>
-            <Image source={photo} style={styles.thumbnail} />
-          </View>
-          <View style={styles.thumbnailWrapper}>
-            <Image source={photo} style={styles.thumbnail} />
-          </View>
-        </View> */}
       </View>
     </View>
   )
@@ -54,8 +44,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   mainImageWrapper: {
-    width:400,
-    height: 550,
+    height: 450,
     borderRadius: 15,
     overflow: 'hidden',
     position: 'relative',
@@ -63,7 +52,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   backIconContainer: {
     position: 'absolute',
@@ -97,26 +86,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  thumbnailContainer: {
-    position: 'absolute',
-    right: 10,
-    bottom: 10,
-    flexDirection: 'row',
-  },
-  thumbnailWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  thumbnail: {
-    width: 40,
-    height: 40,
-    borderRadius: 6,
   },
 })
 

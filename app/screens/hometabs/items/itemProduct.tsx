@@ -10,13 +10,14 @@ interface ItemProps {
   description?: string;
   details?: string;
   status?: string;
+  stock_id: number;
 }
 
-const ItemProduct: React.FC<ItemProps> = ({ navigation, photo, name, price, description, details, status }) => {
+const ItemProduct: React.FC<ItemProps> = ({ navigation, photo, name, price, description, details, status, stock_id }) => {
   return (
     <TouchableOpacity
       style={styles.productCard}
-      onPress={() => navigation.navigate('ItemProductDetail', { product: { photo, name, price, description, details, status } })}
+      onPress={() => navigation.navigate('ItemProductDetail', { product: { photo, name, price, description, details, status, stock_id } })}
     >
       <View style={styles.imageContainer}>
         <Image source={photo} style={styles.productImage} />

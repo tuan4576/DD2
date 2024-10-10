@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Animated, Dimensions, Platform, ScrollView } from 'react-native';
+import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Animated, Dimensions, Alert, ScrollView, BackHandler, RefreshControl, SafeAreaView, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { REGISTER } from '../api/apiService';
+import { CommonActions } from '@react-navigation/native';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs(['Lỗi đăng ký:']); // Ignore log notification by message
+LogBox.ignoreAllLogs(); // Ignore all log notifications
 
 const { width, height } = Dimensions.get('window');
 
@@ -15,6 +21,11 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isVisible, setIsVisible] = useState(false);
+  const backPressedOnce = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const emailSuggestions = ['gmail.com'];
 
   const images = [
     require('../asset/image/Man.png'),
@@ -33,10 +44,31 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
       });
     }, 5000);
 
-    return () => clearInterval(interval);
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    return () => {
+      clearInterval(interval);
+      backHandler.remove();
+    };
   }, []);
 
-  const handleSignUp = () => {
+  const handleBackPress = () => {
+    if (backPressedOnce.current) {
+      BackHandler.exitApp();
+      return true;
+    }
+
+    backPressedOnce.current = true;
+    Alert.alert('Thông báo', 'Nhấn back lần nữa để thoát ứng dụng');
+
+    setTimeout(() => {
+      backPressedOnce.current = false;
+    }, 2000);
+
+    return true;
+  };
+
+  const handleSignUp = async () => {
     if (!name || !email || !password || !confirmPassword) {
       setMessage('Vui lòng điền đầy đủ thông tin');
       setIsVisible(true);
@@ -49,39 +81,93 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
       setTimeout(() => setIsVisible(false), 3000);
       return;
     }
-    // Thực hiện logic đăng ký ở đây
-    // Giả sử đăng ký thành công
-    setMessage('Đăng ký tài khoản thành công');
-    setIsVisible(true);
+    
+    try {
+      const response = await REGISTER('register', { name, email, password, password_confirmation: confirmPassword });
+      if (response && response.data) {
+        setMessage('Đăng ký thành công');
+        setIsVisible(true);
+        setTimeout(() => {
+          setIsVisible(false);
+          navigation.navigate('SignIn');
+        }, 3000);
+      } else {
+        setMessage('Đăng ký không thành công. Vui lòng thử lại.');
+        setIsVisible(true);
+        setTimeout(() => setIsVisible(false), 3000);
+      }
+    } catch (error: any) {
+      // console.error('Lỗi đăng ký:', error);
+      if (error.response && error.response.status === 400) {
+        setMessage('Email đã tồn tại. Vui lòng sử dụng email khác.');
+      } else {
+        setMessage('Đăng ký không thành công. Vui lòng thử lại.');
+      }
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
+    }
+  };
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setMessage('');
+    setIsVisible(false);
     setTimeout(() => {
-      setIsVisible(false);
-      navigation.navigate('SignIn');
-    }, 3000);
+      setRefreshing(false);
+    }, 2000);
+  }, []);
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (text.endsWith('@')) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    setEmail(email + suggestion);
+    setShowSuggestions(false);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
-        {images.map((image, index) => (
-          <Animated.Image
-            key={index}
-            source={image}
-            style={[
-              styles.backgroundImage,
-              { 
-                position: 'absolute', 
-                top: 0, 
-                transform: [
-                  { translateX: index === currentImageIndex ? slideAnim : (index === (currentImageIndex + 1) % images.length ? Animated.add(slideAnim, width) : width) }
-                ],
-              }
-            ]}
-          />
-        ))}
-      </View>
-      <View style={styles.overlay} />
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.signUpContainer}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
+          {images.map((image, index) => (
+            <Animated.Image
+              key={index}
+              source={image}
+              style={[
+                styles.backgroundImage,
+                { 
+                  position: 'absolute', 
+                  top: 0, 
+                  transform: [
+                    { translateX: index === currentImageIndex ? slideAnim : (index === (currentImageIndex + 1) % images.length ? Animated.add(slideAnim, width) : width) }
+                  ],
+                }
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.overlay} />
+        <ScrollView 
+          contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#d56b6b']}
+              tintColor="#fff"
+            />
+          }
+        >
           <Text style={styles.title}>Đăng Ký</Text>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Họ và tên</Text>
@@ -109,11 +195,22 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
                 autoCapitalize="none"
                 underlineColorAndroid="transparent"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={handleEmailChange}
               />
-              <Text style={styles.emailSuffix}>@gmail.com</Text>
               <Ionicons name="mail-outline" size={20} color="#808080" style={styles.icon} />
             </View>
+            {showSuggestions && (
+              <FlatList
+                data={emailSuggestions}
+                renderItem={({ item }) => (
+                  <TouchableOpacity onPress={() => handleSuggestionPress(item)}>
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+                style={styles.suggestionList}
+              />
+            )}
           </View>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Mật khẩu</Text>
@@ -171,20 +268,23 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
               <Text style={[styles.signInText, styles.signInLink]}>Đăng nhập</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-      {isVisible && (
-        <View style={styles.messageContainer}>
-          <Text style={styles.messageText}>{message}</Text>
-        </View>
-      )}
-    </View>
+        </ScrollView>
+        {isVisible && (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
 export default SignUpScreen;
-
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#6dafce',
+  },
   container: {
     flex: 1,
   },
@@ -200,8 +300,6 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  signUpContainer: {
     padding: 20,
   },
   title: {
@@ -234,11 +332,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderWidth: 0,
     color: '#fff',
-  },
-  emailSuffix: {
-    fontSize: 14,
-    color: '#999',
-    paddingRight: 5,
   },
   icon: {
     padding: 10,
@@ -302,5 +395,16 @@ const styles = StyleSheet.create({
   messageText: {
     color: '#fff',
     textAlign: 'center',
+  },
+  suggestionList: {
+    maxHeight: 120,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 8,
+    marginTop: 5,
+  },
+  suggestionText: {
+    padding: 10,
+    fontSize: 14,
+    color: '#333',
   },
 });
