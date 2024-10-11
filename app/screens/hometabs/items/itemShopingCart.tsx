@@ -3,9 +3,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { GET_SHOPPING_CART } from '@/app/api/apiService'
 import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ItemShopingCart = ({ navigation }: { navigation: any }) => {
   interface CartItem {
+    id: number;
     stock_id: number;
     quantity: number;
     product: {
@@ -23,25 +26,50 @@ const ItemShopingCart = ({ navigation }: { navigation: any }) => {
   }
 
   const [shoppingCart, setShoppingCart] = useState<ShoppingCart | null>(null);
+  const [cartQuantities, setCartQuantities] = useState<Record<number, number>>({});
+  const isFocused = useIsFocused();
   
   const fetchShoppingCart = useCallback(async () => {
     try {
-      const response = await GET_SHOPPING_CART('shopping-cart');
-      if (response && response.data) {
-        const cartData = response.data;
-        const totalItems = cartData.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
-        const totalPrice = cartData.reduce((sum: number, item: CartItem) => sum + (item.quantity * item.product.price), 0);
+      const storedCart = await AsyncStorage.getItem('localCart');
+      const storedQuantities = await AsyncStorage.getItem('cartQuantities');
+      
+      if (storedCart && storedQuantities) {
+        const parsedCart = JSON.parse(storedCart);
+        const parsedQuantities = JSON.parse(storedQuantities);
+        setCartQuantities(parsedQuantities);
+        
+        const totalItems = Object.values(parsedQuantities).reduce((sum: number, quantity: number) => sum + quantity, 0);
+        const totalPrice = parsedCart.reduce((sum: number, item: CartItem) => sum + (parsedQuantities[item.id] * item.product.price), 0);
         
         setShoppingCart({
-          items: cartData,
+          items: parsedCart,
           totalItems: totalItems,
           totalPrice: totalPrice
         });
-        console.log({
-          items: cartData,
-          totalItems: totalItems,
-          totalPrice: totalPrice
-        });
+      } else {
+        const response = await GET_SHOPPING_CART('shopping-cart');
+        if (response && response.data) {
+          const cartData = response.data;
+          const newQuantities: Record<number, number> = {};
+          cartData.forEach((item: CartItem) => {
+            newQuantities[item.id] = item.quantity;
+          });
+          
+          const totalItems = Object.values(newQuantities).reduce((sum: number, quantity: number) => sum + quantity, 0);
+          const totalPrice = cartData.reduce((sum: number, item: CartItem) => sum + (item.quantity * item.product.price), 0);
+          
+          const newShoppingCart = {
+            items: cartData,
+            totalItems: totalItems,
+            totalPrice: totalPrice
+          };
+          
+          setShoppingCart(newShoppingCart);
+          setCartQuantities(newQuantities);
+          await AsyncStorage.setItem('localCart', JSON.stringify(cartData));
+          await AsyncStorage.setItem('cartQuantities', JSON.stringify(newQuantities));
+        }
       }
     } catch (error) {
       console.error('Error fetching shopping cart:', error);
@@ -49,8 +77,10 @@ const ItemShopingCart = ({ navigation }: { navigation: any }) => {
   }, []);
 
   useEffect(() => {
-    fetchShoppingCart();
-  }, [fetchShoppingCart]);
+    if (isFocused) {
+      fetchShoppingCart();
+    }
+  }, [isFocused, fetchShoppingCart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,7 +92,10 @@ const ItemShopingCart = ({ navigation }: { navigation: any }) => {
     <View style={styles.iconContainer}>
       <TouchableOpacity 
         style={[styles.iconWrapper, styles.bagIcon]}
-        onPress={() => navigation.navigate('ShoppingBag', { shoppingCart: shoppingCart?.items })}
+        onPress={() => {
+          fetchShoppingCart(); // Fetch latest data before navigating
+          navigation.navigate('ShoppingBag', { shoppingCart: shoppingCart?.items });
+        }}
       >
         <Icon name="bag-handle-outline" size={28} color="#000" />
         <View style={styles.notificationBadge}>

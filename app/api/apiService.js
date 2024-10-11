@@ -117,6 +117,60 @@ export function GET_SHOPPING_CART(endpoint) {
             throw error;
         });
 }
+export function UPDATE_SHOPPING_CART(endpoint, id, data) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'PUT',
+                url: `${API_URL}/${endpoint}/${id}`,
+                data: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Update shopping cart error:', error);
+            if (error.response && error.response.status === 401) {
+                // Handle unauthorized access
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+export function DELETE_SHOPPING_CART(endpoint, id) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'DELETE',
+                url: `${API_URL}/${endpoint}/${id}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Delete shopping cart item error:', error);
+            if (error.response && error.response.status === 401) {
+                // Handle unauthorized access
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+
 
 
 

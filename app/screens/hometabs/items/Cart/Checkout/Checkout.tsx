@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, FlatList, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const Checkout = ({navigation} : {navigation : any}) => {
+const Checkout = ({ navigation, route }: { navigation: any; route: any }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Gpay');
   const [selectedAddress, setSelectedAddress] = useState(1);
 
-  const totalPrice = 2100000; // Giả sử giá được truyền vào hoặc tính toán ở nơi khác
+  const { items, totalItems, totalPrice } = route.params;
   const deliveryDate = '25 tháng 3 năm 2024';
 
   const addresses = [
@@ -81,7 +81,7 @@ const Checkout = ({navigation} : {navigation : any}) => {
       {/* Thông tin giao hàng */}
       <View style={styles.deliveryInfo}>
         <View style={styles.deliveryRow}>
-          <Image source={require('../asset/image/Car.png')} style={{ width: 40, height: 30 }} />
+          {/* <Image source={require('../asset/image/Car.png')} style={{ width: 40, height: 30 }} /> */}
           <Text style={styles.deliveryText}>Dự kiến giao hàng: {deliveryDate}</Text>
         </View>
         <View style={styles.totalRow}>

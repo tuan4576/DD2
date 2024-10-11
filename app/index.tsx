@@ -10,7 +10,7 @@ import ItemProductDetail from './screens/hometabs/Detail/ProductDetail';
 
 import ProductDetails from './component/ProductDetails';
 import ShoppingBag from './screens/hometabs/items/Cart/Cart';
-import Checkout from './component/Checkout';
+import Checkout from './screens/hometabs/items/Cart/Checkout/Checkout';
 import AddAdress from './component/AddAdress';
 import OrderSuccess from './component/OrderSuccess';
 import OrderDetails from './component/OrderDetails';

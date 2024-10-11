@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, TextInput, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { GET_IMG, GET_SHOPPING_CART } from '@/app/api/apiService';
+import { GET_SHOPPING_CART, UPDATE_SHOPPING_CART, DELETE_SHOPPING_CART, GET_IMG } from '@/app/api/apiService';
 
 interface CartItem {
+  id: number;
   stock_id: number;
   quantity: number;
   product: {
@@ -15,9 +17,68 @@ interface CartItem {
   isChecked: boolean;
 }
 
+interface ItemProductProps {
+  item: CartItem;
+  onDelete: (id: number) => void;
+  onUpdateQuantity: (id: number, newQuantity: number) => void;
+}
+
+const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuantity }) => {
+  const [quantity, setQuantity] = useState(item.quantity);
+
+  const formatPrice = (price: number) => {
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const handleIncrement = () => {
+    const newQuantity = quantity + 1;
+    setQuantity(newQuantity);
+    onUpdateQuantity(item.id, newQuantity);
+  };
+
+  const handleDecrement = () => {
+    if (quantity > 1) {
+      const newQuantity = quantity - 1;
+      setQuantity(newQuantity);
+      onUpdateQuantity(item.id, newQuantity);
+    }
+  };
+
+  return (
+    <View key={item.stock_id} style={styles.itemFrame}>
+      <View style={styles.itemRow}>
+        <Image
+          source={{ uri: GET_IMG(item.product.photo) }}
+          style={styles.image}
+        />
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemName}>{item.product.name}</Text>
+          <Text style={styles.itemPrice}>{formatPrice(item.product.price)}đ</Text>
+          <View style={styles.quantityControl}>
+            <TouchableOpacity style={styles.quantityButton} onPress={handleDecrement}>
+              <Text style={styles.quantityButtonText}>-</Text>
+            </TouchableOpacity>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <TouchableOpacity style={styles.quantityButton} onPress={handleIncrement}>
+              <Text style={styles.quantityButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.deleteButton} 
+          onPress={() => onDelete(item.id)}
+        >
+          <Text style={styles.deleteButtonText}>Xóa</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
+}
+
 const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
   const [shoppingCart, setShoppingCart] = useState<CartItem[] | null>(null);
   const [isAnyItemChecked, setIsAnyItemChecked] = useState(false);
+  const [localCart, setLocalCart] = useState<CartItem[] | null>(null);
 
   useEffect(() => {
     fetchShoppingCart();
@@ -40,45 +101,104 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
           isChecked: false
         }));
         setShoppingCart(cartWithCheckbox);
+        
+        // Load saved quantities
+        const savedQuantities = await AsyncStorage.getItem('cartQuantities');
+        if (savedQuantities) {
+          const quantities = JSON.parse(savedQuantities);
+          const updatedCart = cartWithCheckbox.map((item: CartItem) => ({
+            ...item,
+            quantity: quantities[item.id] || item.quantity
+          }));
+          setLocalCart(updatedCart);
+        } else {
+          setLocalCart(cartWithCheckbox);
+        }
       }
     } catch (error) {
       console.error('Error fetching shopping cart:', error);
     }
   };
 
-  const formatPrice = (price: number) => {
-    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const deleteCheckedItems = () => {
+    if (localCart) {
+      const updatedCart = localCart.filter(item => !item.isChecked);
+      setLocalCart(updatedCart);
+      setIsAnyItemChecked(false);
+      saveCartQuantities(updatedCart);
+    }
   };
 
-  const toggleItemCheck = (stockId: number) => {
-    if (shoppingCart) {
-      const updatedCart = shoppingCart.map(item => 
-        item.stock_id === stockId ? { ...item, isChecked: !item.isChecked } : item
+  const toggleItemCheck = (id: number) => {
+    if (localCart) {
+      const updatedCart = localCart.map(item => 
+        item.id === id ? { ...item, isChecked: !item.isChecked } : item
       );
-      setShoppingCart(updatedCart);
+      setLocalCart(updatedCart);
       setIsAnyItemChecked(updatedCart.some(item => item.isChecked));
     }
   };
 
-  const deleteCheckedItems = () => {
-    if (shoppingCart) {
-      const updatedCart = shoppingCart.filter(item => !item.isChecked);
-      setShoppingCart(updatedCart);
-      setIsAnyItemChecked(false);
+  const updateShoppingCart = async () => {
+    if (localCart) {
+      try {
+        for (const item of localCart) {
+          await UPDATE_SHOPPING_CART('shopping-cart', item.id, item);
+        }
+        setShoppingCart(localCart);
+      } catch (error) {
+        console.error('Error updating shopping cart:', error);
+      }
     }
   };
 
-  if (!shoppingCart) {
+  const saveCartQuantities = async (cart: CartItem[]) => {
+    const quantities = cart.reduce((acc, item) => {
+      acc[item.id] = item.quantity;
+      return acc;
+    }, {} as Record<number, number>);
+    await AsyncStorage.setItem('cartQuantities', JSON.stringify(quantities));
+  };
+
+  const handleUpdateQuantity = async (id: number, newQuantity: number) => {
+    if (localCart) {
+      const updatedCart = localCart.map(item =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      );
+      setLocalCart(updatedCart);
+      await saveCartQuantities(updatedCart);
+    }
+  };
+
+  const totalPrice = useMemo(() => {
+    if (!localCart) return 0;
+    return localCart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  }, [localCart]);
+
+  const formatPrice = (price: number) => {
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const handleDeleteItem = async (itemId: number) => {
+    try {
+      await DELETE_SHOPPING_CART('shopping-cart', itemId);
+      if (localCart) {
+        const updatedCart = localCart.filter(item => item.id !== itemId);
+        setLocalCart(updatedCart);
+        await saveCartQuantities(updatedCart);
+      }
+    } catch (error) {
+      console.error('Error deleting item from shopping cart:', error);
+    }
+  };
+
+  if (!localCart) {
     return (
       <View style={styles.container}>
         <Text>Loading...</Text>
       </View>
     );
   }
-
-  const totalPrice = shoppingCart.reduce((sum, item) => 
-    item.isChecked ? sum + item.product.price * item.quantity : sum, 0
-  );
 
   return (
     <ScrollView style={styles.container}>
@@ -87,47 +207,17 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Giỏ hàng</Text>
-        {isAnyItemChecked && (
-          <TouchableOpacity style={styles.deleteButton} onPress={deleteCheckedItems}>
-            <Text style={styles.deleteButtonText}>Xóa</Text>
-          </TouchableOpacity>
-        )}
         {!isAnyItemChecked && <View style={styles.placeholder} />}
       </View>
 
       <View style={styles.itemsContainer}>
-        {shoppingCart.map((item: CartItem) => (
-          <View key={item.stock_id} style={styles.itemFrame}>
-            <View style={styles.itemRow}>
-              <Image
-                source={{ uri: GET_IMG(item.product.photo) }}
-                style={styles.image}
-              />
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.product.name}</Text>
-                <Text style={styles.itemPrice}>{formatPrice(item.product.price)}đ</Text>
-                <View style={styles.quantityControl}>
-                  <TouchableOpacity style={styles.quantityButton}>
-                    <Text style={styles.quantityButtonText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.quantityText}>{item.quantity}</Text>
-                  <TouchableOpacity style={styles.quantityButton}>
-                    <Text style={styles.quantityButtonText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={[styles.checkoutButton, item.isChecked && styles.checkoutButtonActive]} 
-                onPress={() => toggleItemCheck(item.stock_id)}
-              >
-                <Icon 
-                  name={item.isChecked ? "checkmark" : "add"} 
-                  size={20} 
-                  color="#fff" 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+        {localCart.map((item: CartItem) => (
+          <ItemProduct
+            key={item.id}
+            item={item}
+            onDelete={handleDeleteItem}
+            onUpdateQuantity={handleUpdateQuantity}
+          />
         ))}
       </View>
 
@@ -163,7 +253,17 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
 
       <TouchableOpacity 
         style={styles.checkoutButtonLarge}
-        onPress={() => navigation.navigate('Checkout')}
+        onPress={() => {
+          updateShoppingCart();
+          navigation.navigate('Checkout', {
+            items: localCart.filter(item => item.isChecked).map(item => ({
+              ...item,
+              stock_id: item.stock_id
+            })),
+            totalItems: localCart.filter(item => item.isChecked).reduce((sum, item) => sum + item.quantity, 0),
+            totalPrice: localCart.filter(item => item.isChecked).reduce((sum, item) => sum + (item.quantity * item.product.price), 0)
+          });
+        }}
       >
         <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
       </TouchableOpacity>
@@ -176,22 +276,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
-  },
-  deleteButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#FF937B',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    elevation: 2,
-  },
-  deleteButtonText: {
-    color: '#FF937B',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
@@ -208,6 +292,38 @@ const styles = StyleSheet.create({
   },
   itemsContainer: {
     marginBottom: 20,
+  },
+  promoContainer: {
+    marginVertical: 10,
+  },
+  horizontalLine: {
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+    marginVertical: 20,
+  },
+  promoInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  promoInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    padding: 10,
+    marginRight: 10,
+  },
+  applyButton: {
+    backgroundColor: '#00A0FF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   itemFrame: {
     backgroundColor: '#F5F5F5',
@@ -260,48 +376,20 @@ const styles = StyleSheet.create({
     minWidth: 30,
     textAlign: 'center',
   },
-  checkoutButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ccc',
+  deleteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FF0000',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkoutButtonActive: {
-    backgroundColor: '#FF937B',
-  },
-  promoContainer: {
-    marginVertical: 10,
-  },
-  horizontalLine: {
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-    marginVertical: 20,
-  },
-  promoInputContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  promoInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 10,
-  },
-  applyButton: {
-    backgroundColor: '#00A0FF',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  deleteButtonText: {
+    color: '#FF0000',
+    fontSize: 14,
+    fontWeight: '600',
   },
   summary: {
     marginVertical: 20,
@@ -349,7 +437,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  
 });
 
 export default ShoppingBag;
