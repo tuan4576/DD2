@@ -4,17 +4,18 @@ import React from 'react'
 interface CategoryProps {
   id: string;
   name: string;
+  onSelectCategory: (id: string) => void;
 }
 
-const ItemCategory: React.FC<CategoryProps> = ({ id, name }) => (
-  <TouchableOpacity style={styles.categoryButton}>
+const ItemCategory: React.FC<CategoryProps> = ({ id, name, onSelectCategory }) => (
+  <TouchableOpacity key={id} onPress={() => onSelectCategory(id)} style={styles.categoryButton}>
     <Text style={styles.categoryText}>{name}</Text>
   </TouchableOpacity>
 );
 
-const itemCategory = ({ id, name }: CategoryProps) => {
+const itemCategory = ({ id, name, onSelectCategory }: CategoryProps) => {
   return (
-    <ItemCategory id={id} name={name} />
+    <ItemCategory id={id} name={name} onSelectCategory={onSelectCategory} />
   )
 }
 

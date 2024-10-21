@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "app/api/apiService.js"  ]
+, "app/api/apiService.js", "app/screens/hometabs/items/test.tsx"  ]
 }

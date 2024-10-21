@@ -9,7 +9,7 @@ import Svg, { Path } from 'react-native-svg';
 import Feed from './hometabs/Feed';
 import Notifications from './hometabs/Notifications';
 import Profile from './hometabs/Profile';
-import QR from './hometabs/QR';
+import Wishlist from './hometabs/Wishlist';
 
 import { GET_ALL, GET_IMG } from "../api/apiService"; 
 
@@ -138,12 +138,12 @@ const HomeScreen = ({navigation} : {navigation : any}) => {
         }}
       />
         <Tab.Screen
-          name="QR"
-          component={QR}
+          name="Wishlist"
+          component={Wishlist}
           options={{
-            tabBarLabel: 'Quét mã',
+            tabBarLabel: 'Yêu thích',
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="qrcode-scan" size={size} color={color} />
+              <MaterialCommunityIcons name="heart-outline" size={size} color={color} />
             ),
           }}
         />

@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabNavigation from './TabNavigation';
 import Status from './Status';
 import Price from './Price';
 import Name from './Name';
 import Images from './Images';
-import { ADD_TO_CART } from '../../../api/apiService';
-
-const colors = ['#000000', '#4CAF50', '#6200EA', '#03A9F4']; // Các màu cho sản phẩm
-const sizes = ['S', 'M', 'L']; // Kích thước sản phẩm
+import { ADD_TO_CART, POST_WISHLIST, GET_WISHLIST } from '../../../api/apiService';
 
 interface ProductParams {
   product: {
@@ -21,7 +19,8 @@ interface ProductParams {
     status: string;
     details: string;
     description: string;
-    stock_id: number; // Thêm stock_id vào interface
+    stock_id: number;
+    wishlist_id?: number;
   };
 }
 
@@ -29,30 +28,49 @@ const ProductDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { product } = route.params as ProductParams;
-  const { id, photo, name, price, status, details, description, stock_id } = product;
+  const { id, photo, name, price, status, details, description, stock_id, wishlist_id } = product;
+  const [quantity, setQuantity] = useState(1);
+  const [cartQuantities, setCartQuantities] = useState<{[key: number]: number}>({});
+  // const [wishlistItems, setWishlistItems] = useState<number[]>([]);
+  const [message, setMessage] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
 
-  const [selectedColor, setSelectedColor] = useState('#000000'); // Màu được chọn
-  const [selectedSize, setSelectedSize] = useState('M'); // Kích thước được chọn
-  const [quantity, setQuantity] = useState(1); // Số lượng sản phẩm
-  const [activeTab, setActiveTab] = useState('description'); // Tab hiện tại
+  useEffect(() => {
+    loadCartQuantities();
+    loadWishlistItems();
+  }, []);
 
-  const renderColorOption = (color: string) => (
-    <TouchableOpacity
-      key={color}
-      style={[styles.colorOption, { backgroundColor: color }, selectedColor === color && styles.selectedColor]}
-      onPress={() => setSelectedColor(color)}
-    />
-  );
+  const loadCartQuantities = async () => {
+    try {
+      const savedQuantities = await AsyncStorage.getItem('cartQuantities');
+      if (savedQuantities) {
+        setCartQuantities(JSON.parse(savedQuantities));
+      }
+    } catch (error) {
+      console.error('Error loading cart quantities:', error);
+    }
+  };
 
-  const renderSizeOption = (size: string) => (
-    <TouchableOpacity
-      key={size}
-      style={[styles.sizeOption, selectedSize === size && styles.selectedSize]}
-      onPress={() => setSelectedSize(size)}
-    >
-      <Text style={styles.sizeText}>{size}</Text>
-    </TouchableOpacity>
-  );
+  const saveCartQuantities = async (newQuantities: {[key: number]: number}) => {
+    try {
+      await AsyncStorage.setItem('cartQuantities', JSON.stringify(newQuantities));
+    } catch (error) {
+      console.error('Error saving cart quantities:', error);
+    }
+  };
+
+  const loadWishlistItems = async () => {
+    try {
+      const response = await GET_WISHLIST('wishlist');
+      const wishlistProducts = response.data;
+      const wishlistIds = wishlistProducts.map((item: any) => item.id);
+      // setWishlistItems(wishlistIds);
+      setIsInWishlist(wishlistIds.includes(id));
+    } catch (error) {
+      console.error('Error loading wishlist items:', error);
+    }
+  };
 
   const incrementQuantity = () => {
     setQuantity((prevQuantity) => prevQuantity + 1);
@@ -68,73 +86,101 @@ const ProductDetailScreen = () => {
     try {
       const cartData = {
         quantity: quantity,
-        stock_id: stock_id
+        stock_id: stock_id,
       };
-      // console.log('Data being sent to cart:', cartData);
       const response = await ADD_TO_CART('shopping-cart', cartData);
-      console.log('Product added to cart:', response);
-      // Handle success (e.g., show a success message, update cart count, etc.)
+      console.log('Product added to cart:', cartData);
+      
+      // Update cartQuantities
+      const newQuantities = {
+        ...cartQuantities,
+        [stock_id]: (cartQuantities[stock_id] || 0) + quantity
+      };
+      setCartQuantities(newQuantities);
+      saveCartQuantities(newQuantities);
+      
+      setMessage('Sản phẩm đã được thêm vào giỏ hàng');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
     } catch (error) {
-      console.error('Failed to add product to cart:', error);
-      // Handle error (e.g., show an error message)
+      // console.error('Failed to add product to cart:', error);
+      setMessage('Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    try {
+      if (!isInWishlist) {
+        const wishlistData = {
+          product_id: id
+        };
+        await POST_WISHLIST('wishlist', wishlistData);
+        setIsInWishlist(true);
+        setMessage('Sản phẩm đã được thêm vào danh sách yêu thích');
+      } else {
+        // Remove from wishlist
+        // const newWishlist = wishlistItems.filter(item => item !== id);
+        // setWishlistItems(newWishlist);
+        // setIsInWishlist(false);
+        // setMessage('Sản phẩm đã được xóa khỏi danh sách yêu thích');
+      }
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
+      // Update wishlist items after toggling
+      await loadWishlistItems();
+    } catch (error) {
+      // console.error('Failed to toggle wishlist:', error);
+      setMessage('Sản phẩm đã có trong danh sách yêu thích');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Image and Product Details */}
-      <Images photo={photo} />
+    <View style={styles.container}>
+      <ScrollView>
+        <Images photo={photo} />
 
-      <View style={styles.detailsContainer}>
-        {/* Product Title, Description and Price */}
-        <View style={styles.titlePriceContainer}>
-          <Name name={name}/>
-          <Price price={price} />
-        </View>
-        {/* Status */}
-        <Status status={status} />
+        <View style={styles.detailsContainer}>
+          <View style={styles.titlePriceContainer}>
+            <Name name={name}/>
+            <Price price={price} />
+          </View>
+          <Status status={status} />
 
-        {/* Tab Navigation */}
           <TabNavigation details={details} description={description} />
-       
-
-        {/* Color Selection */}
-        <View style={styles.selectionContainer}>
-          {/* Color Selection */}
-          <View style={styles.selectionSection}>
-            <Text style={styles.sectionTitle}>Color</Text>
-            <View style={styles.colorOptionsContainer}>
-              {colors.map((color) => renderColorOption(color))}
-            </View>
-          </View>
-
-          {/* Size Selection */}
-          <View style={[styles.selectionSection, styles.rightAlignedSection]}>
-            <Text style={styles.sectionTitle}>Size</Text>
-            <View style={styles.sizeOptionsContainer}>
-              {sizes.map((size) => renderSizeOption(size))}
-            </View>
-          </View>
-        </View>
-
-        {/* Quantity Selector */}
-        <View style={styles.bottomContainer}>
-          <View style={styles.quantityContainer}>
-            <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
-              <Icon name="remove" size={20} color="#000" />
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
-            <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
-              <Icon name="add" size={20} color="#000" />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
-            <Text style={styles.addToCartText}>Add to Cart</Text>
+          <TouchableOpacity style={styles.wishlistButton} onPress={handleToggleWishlist}>
+            <Icon name={isInWishlist ? "heart" : "heart-outline"} size={24} color={isInWishlist ? "#FF0000" : "#000"} />
+            <Text style={styles.wishlistText}>Thêm vào yêu thích</Text>
           </TouchableOpacity>
+          <View style={styles.bottomContainer}>
+            <View style={styles.quantityContainer}>
+              <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
+                <Icon name="remove" size={20} color="#000" />
+              </TouchableOpacity>
+              <Text style={styles.quantityText}>{quantity}</Text>
+              <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
+                <Icon name="add" size={20} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
+              <Text style={styles.addToCartText}>Thêm vào giỏ hàng</Text>
+            </TouchableOpacity>
+          </View>
+
+          
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+      
+      {isVisible && (
+        <View style={styles.messageContainer}>
+          <Text style={styles.messageText}>{message}</Text>
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -143,7 +189,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  
+  messageContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 10,
+    borderRadius: 5,
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  messageText: {
+    color: '#fff',
+    textAlign: 'center',
+  },
   detailsContainer: {
     padding: 16,
   },
@@ -151,61 +209,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-
-
-  
-
-  selectionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  selectionSection: {
-    flex: 1,
-  },
-  rightAlignedSection: {
-    alignItems: 'flex-end',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: '#888',
-    marginBottom: 10,
-  },
-  colorOptionsContainer: {
-    flexDirection: 'row',
-  },
-  colorOption: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: '#F5F5F5',
-  },
-  selectedColor: {
-    borderColor: '#aee2dc',
-  },
-  sizeOptionsContainer: {
-    flexDirection: 'row',
-  },
-  sizeOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginLeft: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedSize: {
-    borderColor: '#d68585',
-    backgroundColor: '#F5F5F5',
-  },
-  sizeText: {
-    fontSize: 16,
-    color: '#000',
   },
   bottomContainer: {
     flexDirection: 'row',
@@ -246,6 +249,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  wishlistButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 10,
+  },
+  wishlistText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#000',
   },
 });
 

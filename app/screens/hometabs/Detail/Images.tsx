@@ -25,10 +25,6 @@ function ProductImage({ photo }: ProductImageProps) {
         <TouchableOpacity style={styles.backIconContainer} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back-outline" size={24} color="#000" />
         </TouchableOpacity>
-        {/* Heart Icon */}
-        <TouchableOpacity style={styles.heartIconContainer}>
-          <Icon name="heart-outline" size={24} color="#000" />
-        </TouchableOpacity>
         {/* Zoom Icon */}
         <TouchableOpacity style={styles.zoomIconContainer} onPress={handleZoom}>
           <Icon name="expand-outline" size={24} color="#000" />
@@ -78,7 +74,7 @@ const styles = StyleSheet.create({
   },
   zoomIconContainer: {
     position: 'absolute',
-    top: 60,
+    top: 10,
     right: 10,
     width: 40,
     height: 40,

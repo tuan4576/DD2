@@ -1,9 +1,9 @@
 // let API_URL = "http://127.0.0.1:8080/api";
 // let API_URL = "http://127.0.0.1:8000/api/mobile";
-let API_URL = "http://192.168.1.10:8000/api/mobile";
-let IMG_URL = "http://192.168.1.10:8000/img";
-// let API_URL = "http://192.168.159.104:8000/api/mobile";
-// let IMG_URL = "http://192.168.159.104:8000/img";
+// let API_URL = "http://192.168.1.10:8000/api/mobile";
+// let IMG_URL = "http://192.168.1.10:8000/img";
+let API_URL = "http://192.168.1.9:8000/api/mobile";
+let IMG_URL = "http://192.168.1.9:8000/img";
 
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -172,6 +172,210 @@ export function DELETE_SHOPPING_CART(endpoint, id) {
 }
 
 
+export function CREATE_ORDER(endpoint, data) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'POST',
+                url: `${API_URL}/${endpoint}`,
+                data: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Create order error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+            }
+            throw error;
+        });
+}
+
+export function GET_ORDER_HISTORY(endpoint) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/${endpoint}`,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Get order history error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+            }
+            throw error;
+        });
+}
+
+export function GET_ORDER_DETAILS(endpoint, orderId) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/${endpoint}/${orderId}`,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Get order details error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+            }
+            throw error;
+        });
+}
+export function GET_PRODUCTS_BY_CATEGORY(categoryId) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            let headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/product/categories/${categoryId}`,
+                headers: headers
+            });
+        })
+        .catch((error) => {
+            console.error('Get products by category error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+            }
+            throw error;
+        });
+}
+export function POST_WISHLIST(endpoint, data) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'POST',
+                url: `${API_URL}/products/${endpoint}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                data: JSON.stringify(data)
+            });
+        })
+        .catch((error) => {
+            // console.error('Post to wishlist error:', error);
+            if (error.response && error.response.status === 401) {
+                // Handle unauthorized access
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+export function GET_WISHLIST(endpoint) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/products/${endpoint}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Get wishlist error:', error);
+            if (error.response && error.response.status === 401) {
+                // Handle unauthorized access
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+export function DELETE_WISHLIST_ITEM(endpoint, productId) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'DELETE',
+                url: `${API_URL}/products/${endpoint}/${productId}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Delete wishlist item error:', error);
+            if (error.response && error.response.status === 401) {
+                // Handle unauthorized access
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+
+export function SEARCH_PRODUCTS(name) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/products/search/${encodeURIComponent(name)}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Search products error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+            }
+            throw error;
+        });
+}
+
+
+
+
+
 
 
 
@@ -214,6 +418,9 @@ export function DELETE_SHOPPING_CART(endpoint, id) {
 
 export function GET_IMG(imgName) {
     return `${IMG_URL}/image/${imgName}`;
+}
+export function GET_LOTTE(animationName = 'success') {
+    return `${IMG_URL}/Animation/${animationName}.json`;
 }
 export function SliderIntro(imgName) {
     return `${IMG_URL}/sliderintro/`;

@@ -1,24 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GET_IMG } from '@/app/api/apiService';
 
 const Profile = ({ navigation }: { navigation: any }) => {
-  const [name, setName] = useState('Nguyễn Văn A');
-  const [email, setEmail] = useState('nguyenvana@example.com');
-  const [phone, setPhone] = useState('0123456789');
-  const [address, setAddress] = useState('123 Đường ABC, Quận XYZ, TP. HCM');
-  const [avatarUri, setAvatarUri] = useState('../../app/asset/image/Avatar.png');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [avatarUri, setAvatarUri] = useState('');
 
-  const handleSave = () => {
-    // Here you would typically save the changes to a backend or local storage
-    Alert.alert(
-      "Thông báo",
-      "Thông tin đã được cập nhật",
-      [
-        { text: "OK", onPress: () => navigation.goBack() }
-      ]
-    );
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const storedUserData = await AsyncStorage.getItem('userData');
+        const savedEmail = await AsyncStorage.getItem('savedEmail');
+        const avatarUri = await AsyncStorage.getItem('userAvatar');
+
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setName(userData.name || '');
+        }
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
+        if (avatarUri) {
+          setAvatarUri(GET_IMG(avatarUri));
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadUserData();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const userData = { name };
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      await AsyncStorage.setItem('savedEmail', email);
+      
+      Alert.alert(
+        "Thông báo",
+        "Thông tin đã được cập nhật",
+        [
+          { text: "OK", onPress: () => navigation.goBack() }
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving user data:', error);
+      Alert.alert("Lỗi", "Không thể lưu thông tin. Vui lòng thử lại.");
+    }
   };
 
   const handleImagePick = async () => {
@@ -37,6 +70,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
             });
             if (!result.canceled) {
               setAvatarUri(result.assets[0].uri);
+              await AsyncStorage.setItem('userAvatar', result.assets[0].uri);
             }
           }
         },
@@ -51,6 +85,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
             });
             if (!result.canceled) {
               setAvatarUri(result.assets[0].uri);
+              await AsyncStorage.setItem('userAvatar', result.assets[0].uri);
             }
           }
         },
@@ -74,10 +109,12 @@ const Profile = ({ navigation }: { navigation: any }) => {
         </View>
 
         <View style={styles.avatarContainer}>
-          <Image
-            source={avatarUri.startsWith('../../') ? require('../../app/asset/image/Avatar.png') : { uri: avatarUri }}
-            style={styles.avatar}
-          />
+          <View style={styles.avatarWrapper}>
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatar}
+            />
+          </View>
           <TouchableOpacity style={styles.cameraIcon} onPress={handleImagePick}>
             <Ionicons name="camera" size={24} color="#fff" />
           </TouchableOpacity>
@@ -86,8 +123,6 @@ const Profile = ({ navigation }: { navigation: any }) => {
         <View style={styles.infoContainer}>
           <InfoItem label="Họ và tên" value={name} onChangeText={setName} />
           <InfoItem label="Email" value={email} onChangeText={setEmail} />
-          <InfoItem label="Số điện thoại" value={phone} onChangeText={setPhone} />
-          <InfoItem label="Địa chỉ" value={address} onChangeText={setAddress} />
         </View>
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -130,6 +165,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     position: 'relative',
+  },
+  avatarWrapper: {
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    borderWidth: 3,
+    borderColor: '#FF937B',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatar: {
     width: 100,

@@ -1,91 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 function ItemSearch() {
   const [placeholder, setPlaceholder] = useState('');
-  const fullPlaceholder = 'Bạn đang cần tìm gì...';
+  const placeholders = ['Bạn đang cần tìm gì...', 'Ở đây chúng tôi có mọi thứ', 'Nhanh gọn tiện lợi', 'Chất lượng uy tín 100%', 'Giá cả hợp lí'];
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [index, setIndex] = useState(0);
-  const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(true);
-  const [isFocused, setIsFocused] = useState(false);
-  const [inputText, setInputText] = useState('');
-  const inputRef = useRef(null);
+  const navigation = useNavigation();
+
+  const updatePlaceholder = useCallback(() => {
+    if (isTyping) {
+      if (index < placeholders[placeholderIndex].length) {
+        setPlaceholder(prev => prev + placeholders[placeholderIndex][index]);
+        setIndex(prev => prev + 1);
+      } else {
+        setIsTyping(false);
+        setTimeout(() => setIndex(placeholders[placeholderIndex].length - 1), 1000);
+      }
+    } else {
+      if (index >= 0) {
+        setPlaceholder(prev => prev.slice(0, -1));
+        setIndex(prev => prev - 1);
+      } else {
+        setIsTyping(true);
+        setIndex(0);
+        setPlaceholderIndex(prev => (prev + 1) % placeholders.length);
+      }
+    }
+  }, [index, isTyping, placeholderIndex, placeholders]);
 
   useEffect(() => {
-    let interval;
-    let cursorInterval;
+    const interval = setInterval(updatePlaceholder, 50);
+    return () => clearInterval(interval);
+  }, [updatePlaceholder]);
 
-    if (!isFocused) {
-      interval = setInterval(() => {
-        if (isTyping) {
-          if (index < fullPlaceholder.length) {
-            setPlaceholder(prevPlaceholder => prevPlaceholder + fullPlaceholder[index]);
-            setIndex(prevIndex => prevIndex + 1);
-          } else {
-            setIsTyping(false);
-            setTimeout(() => {
-              setIndex(fullPlaceholder.length - 1);
-            }, 1000);
-          }
-        } else {
-          if (index >= 0) {
-            setPlaceholder(prevPlaceholder => prevPlaceholder.slice(0, -1));
-            setIndex(prevIndex => prevIndex - 1);
-          } else {
-            setIsTyping(true);
-            setIndex(0);
-          }
-        }
-      }, 100);
-
-      cursorInterval = setInterval(() => {
-        setShowCursor(prev => !prev);
-      }, 500);
-    }
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(cursorInterval);
-    };
-  }, [index, isTyping, isFocused]);
-
-  const handleFocus = () => {
-    setIsFocused(true);
-    setPlaceholder('');
-  };
-
-  const handleBlur = () => {
-    if (inputText === '') {
-      setIsFocused(false);
-      setIndex(0);
-      setIsTyping(true);
-    }
+  const handleSearchPress = () => {
+    navigation.navigate('Search');
   };
 
   return (
-    <View style={styles.searchContainer}>
+    <TouchableOpacity style={styles.searchContainer} onPress={handleSearchPress}>
       <Icon name="search-outline" size={20} color="#aaa" />
       <View style={styles.inputContainer}>
-        {!isFocused && inputText === '' && (
-          <Text style={styles.placeholderText}>
-            {placeholder}
-            {showCursor && <Text style={styles.cursor}>|</Text>}
-          </Text>
-        )}
-        <TextInput
-          ref={inputRef}
-          style={styles.searchInput}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          value={inputText}
-          onChangeText={setInputText}
-        />
+        <Text style={styles.placeholderText}>
+          {placeholder}
+        </Text>
       </View>
-      <TouchableOpacity style={styles.filterButton}>
-        <Icon name="filter-outline" size={20} color="#000" />
-      </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -107,21 +71,9 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   placeholderText: {
-    position: 'absolute',
     fontSize: 16,
     color: '#aaa',
     flexDirection: 'row',
-  },
-  searchInput: {
-    fontSize: 16,
-    flex: 1,
-    color: '#000',
-  },
-  filterButton: {
-    padding: 5,
-  },
-  cursor: {
-    color: '#4A90E2',
   },
 });
 

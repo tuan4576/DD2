@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Image 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { GET_SHOPPING_CART, UPDATE_SHOPPING_CART, DELETE_SHOPPING_CART, GET_IMG } from '@/app/api/apiService';
-
+import {SwipeListView} from 'react-native-swipe-list-view';
 interface CartItem {
   id: number;
   stock_id: number;
@@ -21,9 +21,11 @@ interface ItemProductProps {
   item: CartItem;
   onDelete: (id: number) => void;
   onUpdateQuantity: (id: number, newQuantity: number) => void;
+  setMessage: (message: string) => void;
+  setIsVisible: (isVisible: boolean) => void;
 }
 
-const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuantity }) => {
+const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuantity, setMessage, setIsVisible }) => {
   const [quantity, setQuantity] = useState(item.quantity);
 
   const formatPrice = (price: number) => {
@@ -34,6 +36,9 @@ const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuant
     const newQuantity = quantity + 1;
     setQuantity(newQuantity);
     onUpdateQuantity(item.id, newQuantity);
+    setMessage('Số lượng đã được tăng');
+    setIsVisible(true);
+    setTimeout(() => setIsVisible(false), 3000);
   };
 
   const handleDecrement = () => {
@@ -41,6 +46,13 @@ const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuant
       const newQuantity = quantity - 1;
       setQuantity(newQuantity);
       onUpdateQuantity(item.id, newQuantity);
+      setMessage('Số lượng đã được giảm');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
+    } else {
+      setMessage('Số lượng không thể nhỏ hơn 1');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
     }
   };
 
@@ -66,7 +78,12 @@ const ItemProduct: React.FC<ItemProductProps> = ({ item, onDelete, onUpdateQuant
         </View>
         <TouchableOpacity 
           style={styles.deleteButton} 
-          onPress={() => onDelete(item.id)}
+          onPress={() => {
+            onDelete(item.id);
+            setMessage('Sản phẩm đã được xóa khỏi giỏ hàng');
+            setIsVisible(true);
+            setTimeout(() => setIsVisible(false), 3000);
+          }}
         >
           <Text style={styles.deleteButtonText}>Xóa</Text>
         </TouchableOpacity>
@@ -79,6 +96,8 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
   const [shoppingCart, setShoppingCart] = useState<CartItem[] | null>(null);
   const [isAnyItemChecked, setIsAnyItemChecked] = useState(false);
   const [localCart, setLocalCart] = useState<CartItem[] | null>(null);
+  const [message, setMessage] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     fetchShoppingCart();
@@ -102,7 +121,6 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
         }));
         setShoppingCart(cartWithCheckbox);
         
-        // Load saved quantities
         const savedQuantities = await AsyncStorage.getItem('cartQuantities');
         if (savedQuantities) {
           const quantities = JSON.parse(savedQuantities);
@@ -116,7 +134,9 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
         }
       }
     } catch (error) {
-      console.error('Error fetching shopping cart:', error);
+      setMessage('Lỗi khi tải giỏ hàng');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
     }
   };
 
@@ -147,7 +167,9 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
         }
         setShoppingCart(localCart);
       } catch (error) {
-        console.error('Error updating shopping cart:', error);
+        setMessage('Lỗi khi cập nhật giỏ hàng');
+        setIsVisible(true);
+        setTimeout(() => setIsVisible(false), 3000);
       }
     }
   };
@@ -188,7 +210,9 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
         await saveCartQuantities(updatedCart);
       }
     } catch (error) {
-      console.error('Error deleting item from shopping cart:', error);
+      setMessage('Lỗi khi xóa mục khỏi giỏ hàng');
+      setIsVisible(true);
+      setTimeout(() => setIsVisible(false), 3000);
     }
   };
 
@@ -196,6 +220,21 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
     return (
       <View style={styles.container}>
         <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (localCart.length === 0) {
+    return (
+      <View style={styles.emptyCartContainer}>
+        <Icon name="cart-outline" size={100} color="#ccc" />
+        <Text style={styles.emptyCartText}>Giỏ hàng của bạn đang trống</Text>
+        <TouchableOpacity
+          style={styles.continueShoppingButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Text style={styles.continueShoppingButtonText}>Tiếp tục mua sắm</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -217,6 +256,8 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
             item={item}
             onDelete={handleDeleteItem}
             onUpdateQuantity={handleUpdateQuantity}
+            setMessage={setMessage}
+            setIsVisible={setIsVisible}
           />
         ))}
       </View>
@@ -228,7 +269,14 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
             style={styles.promoInput}
             placeholder="Mã giảm giá"
           />
-          <TouchableOpacity style={styles.applyButton}>
+          <TouchableOpacity 
+            style={styles.applyButton}
+            onPress={() => {
+              setMessage('Mã giảm giá đã được áp dụng');
+              setIsVisible(true);
+              setTimeout(() => setIsVisible(false), 3000);
+            }}
+          >
             <Text style={styles.applyButtonText}>Áp dụng</Text>
           </TouchableOpacity>
         </View>
@@ -255,18 +303,20 @@ const ShoppingBag = ({navigation, route} : {navigation : any, route: any}) => {
         style={styles.checkoutButtonLarge}
         onPress={() => {
           updateShoppingCart();
-          navigation.navigate('Checkout', {
-            items: localCart.filter(item => item.isChecked).map(item => ({
-              ...item,
-              stock_id: item.stock_id
-            })),
-            totalItems: localCart.filter(item => item.isChecked).reduce((sum, item) => sum + item.quantity, 0),
-            totalPrice: localCart.filter(item => item.isChecked).reduce((sum, item) => sum + (item.quantity * item.product.price), 0)
-          });
+          navigation.navigate('Checkout', {});
+          setMessage('Đang chuyển đến trang thanh toán');
+          setIsVisible(true);
+          setTimeout(() => setIsVisible(false), 3000);
         }}
       >
         <Text style={styles.checkoutButtonText}>Tiến hành thanh toán</Text>
       </TouchableOpacity>
+
+      {isVisible && (
+        <View style={styles.messageContainer}>
+          <Text style={styles.messageText}>{message}</Text>
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -276,6 +326,44 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+  },
+  messageContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 10,
+    borderRadius: 5,
+    zIndex: 1000,
+    elevation: 5, // for Android
+  },
+  messageText: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+  emptyCartContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  emptyCartText: {
+    fontSize: 18,
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  continueShoppingButton: {
+    backgroundColor: '#00A0FF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  continueShoppingButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',

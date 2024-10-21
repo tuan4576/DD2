@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, ScrollView, FlatList, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import ItemProduct from './items/itemProduct';
 import ItemCategory from './items/itemCategory';
-import { GET_ALL, GET_IMG, GET_CATEGORIES } from "../../api/apiService"; 
+import { GET_ALL, GET_IMG, GET_CATEGORIES, GET_PRODUCTS_BY_CATEGORY } from "../../api/apiService"; 
 import ItemSearch from './items/itemSearch';
 import ItemShopingCart from './items/itemShopingCart';
 import ItemPromo from './items/itemPromo';
@@ -16,17 +16,20 @@ interface ItemProps {
   navigation: any;
   photo: string;
   name: string;
-  price: string;
+  price: number;
   status: string;
   details: string;
   description: string;
   stock_id: number;
+  id: number;
+  wishlist_id: number; // Added wishlist_id property
 }
 interface CategoryProps {
   id: string;
   name: string;
+  onSelectCategory: (id: string) => void;
 }
-const Item: React.FC<ItemProps> = ({ navigation, photo, name, price, status, details, description, stock_id }) => (
+const Item: React.FC<ItemProps> = ({ navigation, photo, name, price, status, details, description, stock_id, id, wishlist_id }) => (
   <ItemProduct 
     navigation={navigation}
     photo={{ uri: GET_IMG(photo) }}
@@ -36,12 +39,15 @@ const Item: React.FC<ItemProps> = ({ navigation, photo, name, price, status, det
     details={details}
     description={description}
     stock_id={stock_id}
+    id={id}
+    wishlist_id={wishlist_id}
   />
 );
-const Category: React.FC<CategoryProps> = ({ id, name }) => (
+const Category: React.FC<CategoryProps> = ({ id, name, onSelectCategory }) => (
   <ItemCategory 
     id={id}
     name={name}
+    onSelectCategory={onSelectCategory}
   />
 );
 interface ShoppingCartItem {
@@ -62,32 +68,22 @@ interface ShoppingCart {
 
 const EcommerceScreen = ({ navigation }: { navigation: any }) => {
   const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1400);
-  }, []);
-
-  const renderProduct = (item: { id: string; title: string; price: string; image: any; stock_id: number }) => (
-    <View style={styles.productCard} key={item.id}>
-      <Image source={item.image} style={styles.productImage} />
-      <View style={styles.productDetails}>
-        <Text style={styles.productTitle}>{item.title}</Text>
-        <Text style={styles.productPrice}>{item.price}</Text>
-      </View>
-    </View>
-  );
   const [products, setProducts] = useState<Array<any>>([]);
   const [categories, setCategory] = useState<Array<any>>([]);
   const [isLoading, setIsLoading] = useState(true); 
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadProducts();
+    setRefreshing(false);
+  }, []);
+
   useEffect(() => {
     GET_CATEGORIES("categories")
       .then((response) => {
-        // console.log("Categories response:", response);
         if (response && response.data) {
           if (Array.isArray(response.data)) {
             setCategory(response.data);
@@ -96,31 +92,32 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
             if (categoryArray) {
               setCategory(categoryArray);
             } else {
-              // console.error("Category data is not in a supported format.");
               setCategory([]);
             }
           } else {
-            // console.error("Category data is not in a supported format.");
             setCategory([]);
           }
         } else {
-          // console.error("Invalid category response:", response);
           setCategory([]);
         }
       })
       .catch((error) => {
-        // console.error("Error fetching categories:", error);
+        console.error("Error fetching categories:", error);
         setCategory([]);
       });
   }, []);
   
   useEffect(() => { 
     loadProducts();
-  }, []); 
+  }, [selectedCategory]); 
 
   const loadProducts = (page = 1) => {
     setIsLoadingMore(true);
-    GET_ALL(`products?page=${page}`) 
+    const fetchFunction = selectedCategory ? 
+      () => GET_PRODUCTS_BY_CATEGORY(selectedCategory) :
+      () => GET_ALL(`products?page=${page}`);
+
+    fetchFunction()
       .then((response) => { 
         if (!response || !response.data) {
           return;
@@ -151,11 +148,15 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
       }); 
   };
 
-
   const loadMoreProducts = () => {
-    if (!isLoadingMore) {
+    if (!isLoadingMore && !selectedCategory) {
       loadProducts(currentPage + 1);
     }
+  };
+
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+    setCurrentPage(1);
   };
 
   return (  
@@ -190,11 +191,18 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
            style={styles.categoryScrollView}
            contentContainerStyle={styles.categoryContainer}
          >
+           <Category
+             key="all"
+             id="all"
+             name="Tất cả"
+             onSelectCategory={() => handleSelectCategory('all')}
+           />
            {categories.map((category) => (
-             <ItemCategory 
+             <Category 
                key={category.id}
                id={category.id}
                name={category.name}
+               onSelectCategory={handleSelectCategory}
              />
            ))}
          </ScrollView>
@@ -203,6 +211,7 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
           {products.map((item) => (
             <Item
               key={item.id}
+              id={item.id}
               navigation={navigation}
               photo={item.photo}
               name={item.name}
@@ -211,28 +220,31 @@ const EcommerceScreen = ({ navigation }: { navigation: any }) => {
               details={item.details}
               description={item.description}
               stock_id={item.stock_id}
+              wishlist_id={item.wishlist_id}
             />
           ))}
         </View> 
-        <View style={styles.seeMoreContainer}>
-          <TouchableOpacity 
-            style={styles.seeMoreButton}
-            onPress={loadMoreProducts}
-            disabled={isLoadingMore}
-          >
-            <Text style={styles.seeMoreButtonText}>
-              {isLoadingMore ? (
-                <>
-                  <Text style={styles.loadingText}>Đang tải </Text>
-                  <Spinner size="small" color="#985445" />
-                </>
-              ) : 'Xem thêm'}
-            </Text>
-            {!isLoadingMore && (
-              <Icon name="chevron-down-outline" size={20} color="#985445" style={styles.seeMoreIcon} />
-            )}
-          </TouchableOpacity>
-        </View>
+        {!selectedCategory && (
+          <View style={styles.seeMoreContainer}>
+            <TouchableOpacity 
+              style={styles.seeMoreButton}
+              onPress={loadMoreProducts}
+              disabled={isLoadingMore}
+            >
+              <Text style={styles.seeMoreButtonText}>
+                {isLoadingMore ? (
+                  <>
+                    <Text style={styles.loadingText}>Đang tải </Text>
+                    <Spinner size="small" color="#985445" />
+                  </>
+                ) : 'Xem thêm'}
+              </Text>
+              {!isLoadingMore && (
+                <Icon name="chevron-down-outline" size={20} color="#985445" style={styles.seeMoreIcon} />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       {/* New Products Introduction */}
       <ItemNewProducts navigation={navigation}/>
 

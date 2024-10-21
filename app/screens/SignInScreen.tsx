@@ -154,7 +154,7 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
       }
     } catch (error) {
       console.error('Lỗi đăng nhập:', error);
-      setMessage('Sai thông tin đăng nhập. Vui lòng kiểm tra lại.');
+      setMessage('Bạn đã nhập sai thông tin. Vui lòng nhập lại.');
       setIsVisible(true);
       setTimeout(() => setIsVisible(false), 3000);
     }
