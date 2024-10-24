@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-
 const OrderSuccess = () => {
   const navigation = useNavigation();
 
@@ -17,7 +16,7 @@ const OrderSuccess = () => {
       
       <View style={styles.content}>
         <Image 
-          source={require('../asset/image/success.png')} 
+          source={require('../../../../../../asset/image/success.png')} 
           style={styles.successImage}
         />
         <Text style={styles.title}>Đặt hàng thành công!</Text>

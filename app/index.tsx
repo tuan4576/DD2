@@ -11,21 +11,23 @@ import ProductDetails from './component/ProductDetails';
 import ShoppingBag from './screens/hometabs/items/Cart/Cart';
 import Checkout from './screens/hometabs/items/Cart/Checkout/Checkout';
 import AddAdress from './component/AddAdress';
-import OrderSuccess from './component/OrderSuccess';
+import OrderSuccess from './screens/hometabs/items/Cart/Checkout/Order/OrderSuccess';
 import OrderDetails from './component/OrderDetails';
 import ContactSupport from './component/ContactSupport';
 import PrintProduct from './component/PrintProduct';
 import User from './screens/hometabs/User/User';
-import MyOrder from './user/MyOrder';
+import MyOrder from './screens/hometabs/items/Cart/Checkout/Order/MyOrder';
 import Wishlist from './user/Wishlist';
 import ShippingAddress from './user/ShippingAddress';
 import PaymentMethod from './user/PaymentMethod';
-import Setting from './user/Setting';
+import Setting from './screens/hometabs/User/Setting';
 import Support from './user/Support';
 import StoreMap from './user/StoreMap';
 import Zoom from './screens/hometabs/component/Zoom';
 import Test from './screens/hometabs/items/test';
+import Tet from './screens/hometabs/User/test';
 import Search from './screens/hometabs/items/Search/Search';
+import Changepassword from './screens/hometabs/User/auth/Changepassword';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
@@ -35,6 +37,7 @@ const AppNavigator = () => {
         <Stack.Navigator initialRouteName="SignIn">
           <Stack.Screen name="SignIn" component={SignInScreen}  options={{headerShown:false}}/>
           <Stack.Screen name="Test" component={Test}  options={{headerShown:false}}/>
+          <Stack.Screen name="Tet" component={Tet}  options={{headerShown:false}}/>
           <Stack.Screen name="SignUp" component={SignUpScreen}  options={{headerShown:false}}/> 
           <Stack.Screen name="Home" component={HomeScreen} options={{headerShown:false}} />
           <Stack.Screen name="Details" component={DetailsScreen}  options={{headerShown:false}}/>
@@ -57,6 +60,7 @@ const AppNavigator = () => {
           <Stack.Screen name="StoreMap" component={StoreMap}  options={{headerShown:false}}/>
           <Stack.Screen name="Zoom" component={Zoom}  options={{headerShown:false}}/>
           <Stack.Screen name="Search" component={Search}  options={{headerShown:false}}/>
+          <Stack.Screen name="Changepassword" component={Changepassword}  options={{headerShown:false}}/>
         </Stack.Navigator>
       </NavigationContainer>
   )

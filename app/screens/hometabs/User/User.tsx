@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GET_IMG } from '@/app/api/apiService';
+import UpdateAvarta from './updateAvarta';
 
 const Profile = ({ navigation }: { navigation: any }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [avatarUri, setAvatarUri] = useState('');
+  const [userId, setUserId] = useState('');
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const storedUserData = await AsyncStorage.getItem('userData');
         const savedEmail = await AsyncStorage.getItem('savedEmail');
-        const avatarUri = await AsyncStorage.getItem('userAvatar');
+        const storedUserId = await AsyncStorage.getItem('userId');
 
         if (storedUserData) {
           const userData = JSON.parse(storedUserData);
@@ -24,8 +23,8 @@ const Profile = ({ navigation }: { navigation: any }) => {
         if (savedEmail) {
           setEmail(savedEmail);
         }
-        if (avatarUri) {
-          setAvatarUri(GET_IMG(avatarUri));
+        if (storedUserId) {
+          setUserId(storedUserId);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -37,7 +36,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
 
   const handleSave = async () => {
     try {
-      const userData = { name };
+      const userData = { name, email };
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
       await AsyncStorage.setItem('savedEmail', email);
       
@@ -49,52 +48,9 @@ const Profile = ({ navigation }: { navigation: any }) => {
         ]
       );
     } catch (error) {
-      console.error('Error saving user data:', error);
-      Alert.alert("Lỗi", "Không thể lưu thông tin. Vui lòng thử lại.");
+      console.error('Error updating user data:', error);
+      Alert.alert("Lỗi", "Không thể cập nhật thông tin. Vui lòng thử lại.");
     }
-  };
-
-  const handleImagePick = async () => {
-    Alert.alert(
-      "Chọn ảnh",
-      "Bạn muốn chọn ảnh từ đâu?",
-      [
-        {
-          text: "Máy ảnh",
-          onPress: async () => {
-            let result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 1,
-            });
-            if (!result.canceled) {
-              setAvatarUri(result.assets[0].uri);
-              await AsyncStorage.setItem('userAvatar', result.assets[0].uri);
-            }
-          }
-        },
-        {
-          text: "Thư viện",
-          onPress: async () => {
-            let result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 1,
-            });
-            if (!result.canceled) {
-              setAvatarUri(result.assets[0].uri);
-              await AsyncStorage.setItem('userAvatar', result.assets[0].uri);
-            }
-          }
-        },
-        {
-          text: "Hủy",
-          style: "cancel"
-        }
-      ]
-    );
   };
 
   return (
@@ -108,17 +64,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
           <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={{ uri: avatarUri }}
-              style={styles.avatar}
-            />
-          </View>
-          <TouchableOpacity style={styles.cameraIcon} onPress={handleImagePick}>
-            <Ionicons name="camera" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <UpdateAvarta navigation={navigation} />
 
         <View style={styles.infoContainer}>
           <InfoItem label="Họ và tên" value={name} onChangeText={setName} />
@@ -160,35 +106,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-    position: 'relative',
-  },
-  avatarWrapper: {
-    width: 106,
-    height: 106,
-    borderRadius: 53,
-    borderWidth: 3,
-    borderColor: '#FF937B',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  cameraIcon: {
-    position: 'absolute',
-    right: '50%',
-    bottom: -10,
-    backgroundColor: '#FF937B',
-    borderRadius: 15,
-    padding: 5,
-    marginRight: -50,
   },
   infoContainer: {
     padding: 16,

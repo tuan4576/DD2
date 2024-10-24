@@ -36,7 +36,7 @@ const Setting = ({ navigation }: { navigation: any }) => {
         <SettingItem 
           icon="key-outline" 
           title="Đổi mật khẩu" 
-          onPress={() => {/* Navigate to change password screen */}}
+          onPress={() => navigation.navigate('Changepassword')}
         />
         <ToggleSettingItem 
           icon="finger-print-outline" 

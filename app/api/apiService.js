@@ -371,6 +371,109 @@ export function SEARCH_PRODUCTS(name) {
             throw error;
         });
 }
+export function UPDATE_USER_PROFILE(userId, userData) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'PUT',
+                url: `${API_URL}/user/update/${userId}`,
+                data: userData,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Update user profile error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+export function CHANGE_PASSWORD(data) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'POST',
+                url: `${API_URL}/user/change-password`,
+                data: data,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Change password error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+
+export function UPDATE_USER_AVATAR(userId, formData) {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'POST',
+                url: `${API_URL}/users/photo`,
+                data: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Update user avatar error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
+export function GET_PRODUCT_ORDERS() {
+    return AsyncStorage.getItem('userToken')
+        .then(token => {
+            if (!token) {
+                throw new Error('User not authenticated');
+            }
+
+            return axios({
+                method: 'GET',
+                url: `${API_URL}/product/orders`,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        })
+        .catch((error) => {
+            console.error('Get product orders error:', error);
+            if (error.response && error.response.status === 401) {
+                console.error('Unauthorized access. Please log in again.');
+                // You might want to navigate to login screen or refresh token here
+            }
+            throw error;
+        });
+}
 
 
 

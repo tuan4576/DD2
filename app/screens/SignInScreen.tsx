@@ -138,6 +138,11 @@ const SignInScreen = ({ navigation }: { navigation: any }) => {
           await AsyncStorage.setItem('userAvatar', response.data.user.photo);
         }
         
+        // Lưu id người dùng
+        if (response.data.user && response.data.user.id) {
+          await AsyncStorage.setItem('userId', response.data.user.id.toString());
+        }
+        
         if (rememberMe) {
           await AsyncStorage.setItem('savedEmail', email);
           await AsyncStorage.setItem('savedPassword', password);
