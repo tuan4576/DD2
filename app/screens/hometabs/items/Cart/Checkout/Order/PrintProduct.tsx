@@ -5,13 +5,7 @@ import * as MediaLibrary from 'expo-media-library';
 import ViewShot from 'react-native-view-shot';
 
 const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) => {
-  const order = route?.params?.order || {
-    id: '',
-    date: '',
-    total: '',
-    status: '',
-    items: []
-  };
+  const order = route?.params?.order || {};
 
   const receiptRef = useRef<ViewShot>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -65,6 +59,11 @@ const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) =>
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -82,29 +81,29 @@ const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) =>
           <View style={styles.receipt}>
             <View style={styles.orderInfo}>
               <Text style={styles.label}>Mã đơn hàng:</Text>
-              <Text style={styles.value}>{order.id}</Text>
+              <Text style={styles.value}>{order.order_code}</Text>
             </View>
             
             <View style={styles.orderInfo}>
               <Text style={styles.label}>Ngày:</Text>
-              <Text style={styles.value}>{order.date}</Text>
+              <Text style={styles.value}>{formatDate(order.order_date)}</Text>
             </View>
             
             <DashedLine />
             
             <View style={styles.tableHeader}>
-              <Text style={styles.columnHeader}>Sản phẩm</Text>
-              <Text style={styles.columnHeader}>SL</Text>
-              <Text style={styles.columnHeader}>Đơn giá</Text>
-              <Text style={styles.columnHeader}>Thành tiền</Text>
+              <Text style={[styles.columnHeader, { flex: 2 }]}>Sản phẩm</Text>
+              <Text style={[styles.columnHeader, { flex: 0.5 }]}>SL</Text>
+              <Text style={[styles.columnHeader, { flex: 1.5 }]}>Đơn giá</Text>
+              <Text style={[styles.columnHeader, { flex: 1.5 }]}>Thành tiền</Text>
             </View>
             
-            {order.items.map((item: any, index: number) => (
+            {order.order_items && order.order_items.map((item: any, index: number) => (
               <View key={index} style={styles.tableRow}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQuantity}>{item.quantity}</Text>
-                <Text style={styles.itemPrice}>{item.price}đ</Text>
-                <Text style={styles.itemTotal}>{parseInt(item.price.replace(',', '')) * item.quantity}đ</Text>
+                <Text style={[styles.itemName, { flex: 2 }]}>{item.product_name}</Text>
+                <Text style={[styles.itemQuantity, { flex: 0.5 }]}>x {item.quantity}</Text>
+                <Text style={[styles.itemPrice, { flex: 1.5 }]}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                <Text style={[styles.itemTotal, { flex: 1.5 }]}>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</Text>
               </View>
             ))}
             
@@ -112,7 +111,7 @@ const PrintProduct = ({ route, navigation }: { route: any; navigation: any }) =>
             
             <View style={styles.total}>
               <Text style={styles.totalLabel}>Tổng cộng:</Text>
-              <Text style={styles.totalValue}>{order.total}đ</Text>
+              <Text style={styles.totalValue}>{order.total_amount?.toLocaleString('vi-VN')}đ</Text>
             </View>
             
             <Text style={styles.status}>Trạng thái: {order.status}</Text>
@@ -211,7 +210,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   columnHeader: {
-    flex: 1,
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -220,18 +218,15 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   itemName: {
-    flex: 2,
+    textAlign: 'left',
   },
   itemQuantity: {
-    flex: 1,
     textAlign: 'center',
   },
   itemPrice: {
-    flex: 1,
     textAlign: 'right',
   },
   itemTotal: {
-    flex: 1,
     textAlign: 'right',
   },
   total: {

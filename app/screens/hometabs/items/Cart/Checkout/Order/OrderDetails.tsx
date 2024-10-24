@@ -2,20 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ToastAndroid } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { GET_IMG } from '@/app/api/apiService';
 
 const OrderDetails = ({ navigation, route } : { navigation: any, route: any }) => {
   const [copiedText, setCopiedText] = useState('');
 
-  const order = route?.params?.order || {
-    id: 'OD123456',
-    date: '2023-06-15',
-    total: '2,100,000',
-    status: 'Đang xử lý',
-    items: [
-      { id: 1, name: 'Áo thun nam', quantity: 2, price: '300,000' },
-      { id: 2, name: 'Quần jean nữ', quantity: 1, price: '500,000' },
-    ]
-  };
+  const order = route?.params?.order || {};
+  const items = route?.params?.items || [];
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -36,7 +29,17 @@ const OrderDetails = ({ navigation, route } : { navigation: any, route: any }) =
         <Text style={styles.headerText}>Chi tiết đơn hàng</Text>
         <TouchableOpacity 
           style={styles.printIcon}
-          onPress={() => navigation.navigate('PrintProduct', { order: order })}
+          onPress={() => navigation.navigate('PrintProduct', { 
+            order: {
+              ...order,
+              order_items: items.map((item: any) => ({
+                product_name: item.product_name,
+                quantity: item.quantity,
+                price: item.price,
+                subtotal: item.price * item.quantity
+              }))
+            }
+          })}
         >
           <Ionicons name="print-outline" size={24} color="#000" />
         </TouchableOpacity>
@@ -46,8 +49,8 @@ const OrderDetails = ({ navigation, route } : { navigation: any, route: any }) =
         <View style={styles.orderInfo}>
           <Text style={styles.orderLabel}>Mã đơn hàng:</Text>
           <View style={styles.orderIdContainer}>
-            <Text style={styles.orderValue}>{order.id}</Text>
-            <TouchableOpacity onPress={() => copyToClipboard(order.id)}>
+            <Text style={styles.orderValue}>{order.order_code}</Text>
+            <TouchableOpacity onPress={() => copyToClipboard(order.order_code)}>
               <Ionicons name="copy-outline" size={20} color="#666" style={styles.copyIcon} />
             </TouchableOpacity>
           </View>
@@ -55,12 +58,12 @@ const OrderDetails = ({ navigation, route } : { navigation: any, route: any }) =
 
         <View style={styles.orderInfo}>
           <Text style={styles.orderLabel}>Ngày đặt hàng:</Text>
-          <Text style={styles.orderValue}>{order.date}</Text>
+          <Text style={styles.orderValue}>{new Date(order.order_date).toLocaleDateString('vi-VN')}</Text>
         </View>
 
         <View style={styles.orderInfo}>
           <Text style={styles.orderLabel}>Tổng tiền:</Text>
-          <Text style={[styles.orderValue, styles.totalPrice]}>{order.total}đ</Text>
+          <Text style={[styles.orderValue, styles.totalPrice]}>{order.total_amount.toLocaleString('vi-VN')}đ</Text>
         </View>
 
         <View style={styles.orderInfo}>
@@ -71,20 +74,32 @@ const OrderDetails = ({ navigation, route } : { navigation: any, route: any }) =
 
       <View style={styles.itemsContainer}>
         <Text style={styles.itemsHeader}>Sản phẩm</Text>
-        {order.items.map((item: any, index: number) => (
+        {items.map((item: any, index: number) => (
           <TouchableOpacity 
             key={index} 
             style={styles.item} 
-            onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
+            onPress={() => navigation.navigate('ItemProductDetail', { 
+              product: { 
+                photo: { uri: GET_IMG(item.photo) }, 
+                name: item.product_name, 
+                price: item.price, 
+                description: item.description, 
+                details: item.details, 
+                status: item.status, 
+                stock_id: item.stock_id, 
+                id: item.product_id, 
+                wishlist_id: item.id 
+              } 
+            })}
           >
             <Image 
-              source={require('../asset/image/Clothing01.png')} 
+              source={{ uri: GET_IMG(item.photo) }} 
               style={styles.itemImage}
             />
             <View style={styles.itemDetails}>
-              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemName}>{item.product_name}</Text>
               <Text style={styles.itemQuantity}>Số lượng: {item.quantity}</Text>
-              <Text style={styles.itemPrice}>{item.price}đ</Text>
+              <Text style={styles.itemPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
             </View>
           </TouchableOpacity>
         ))}

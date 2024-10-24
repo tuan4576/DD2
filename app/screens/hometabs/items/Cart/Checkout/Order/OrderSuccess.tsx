@@ -1,10 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { GET_PRODUCT_ORDERS } from '../../../../../../api/apiService';
 
 const OrderSuccess = () => {
   const navigation = useNavigation();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await GET_PRODUCT_ORDERS();
+      setOrders(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setError('Không thể tải đơn hàng. Vui lòng thử lại sau.');
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -28,9 +49,27 @@ const OrderSuccess = () => {
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={styles.viewOrderButton}
-          onPress={() => navigation.navigate('OrderDetails' as never)}
+          onPress={() => {
+            if (loading) {
+              // Show loading indicator or message
+              return;
+            }
+            if (error) {
+              // Show error message
+              return;
+            }
+            if (orders.length > 0) {
+              navigation.navigate('OrderDetails', { order: orders[0], items: orders[0].items });
+            }
+          }}
         >
-          <Text style={styles.viewOrderButtonText}>Xem chi tiết đơn hàng</Text>
+          {loading ? (
+            <ActivityIndicator color="#FF937B" />
+          ) : (
+            <Text style={styles.viewOrderButtonText}>
+              {error ? 'Không thể tải đơn hàng' : 'Xem chi tiết đơn hàng'}
+            </Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.button}
