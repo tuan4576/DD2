@@ -1,29 +1,33 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
-import LottieView from 'lottie-react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { GET_GIF } from '../../../api/apiService';
 
-interface SuccessProps {
-  onAnimationFinish?: () => void;
+interface TestProps {
+  navigation: any;
 }
 
-const Success: React.FC<SuccessProps> = ({ onAnimationFinish }) => {
-  const animation = useRef<LottieView | null>(null);
+const Succes: React.FC<TestProps> = ({ navigation }) => {
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (animation.current) {
-      animation.current.play();
-    }
-  }, []);
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <LottieView
-        ref={animation}
-        source={require('./success.json')}
-        autoPlay={true}
-        loop={true}
+      <Image 
+        source={{ uri: GET_GIF('thanhcong') }}
         style={styles.animation}
+        resizeMode="contain"
+        onError={() => setError('Failed to load animation')}
       />
+      <Text style={styles.successText}>
+        Mua hàng thành công!
+      </Text>
     </View>
   );
 };
@@ -33,12 +37,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff'
   },
   animation: {
     width: 300,
     height: 300,
   },
+  successText: {
+    marginTop: 20,
+    color: '#3386FF',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  errorText: {
+    color: 'red',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
 
-export default Success;
+export default Succes;

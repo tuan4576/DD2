@@ -522,13 +522,15 @@ export function GET_PRODUCT_ORDERS() {
 export function GET_IMG(imgName) {
     return `${IMG_URL}/image/${imgName}`;
 }
+export function GET_GIF(gifName) {
+    return `${IMG_URL}/Animation/${gifName}.gif`;
+}
 export function GET_LOTTE(animationName = 'success') {
     return `${IMG_URL}/Animation/${animationName}.json`;
 }
 export function SliderIntro(imgName) {
     return `${IMG_URL}/sliderintro/`;
 }
-
 
 
 

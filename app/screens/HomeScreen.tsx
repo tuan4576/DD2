@@ -73,11 +73,6 @@ const CustomTabBar = ({ state, descriptors, navigation }: {
             >
               <View style={styles.iconContainer}>
                 {options.tabBarIcon({ color: isFocused ? '#FF937B' : 'black', size: 24 })}
-                {route.name === 'Notifications' && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationText}>3</Text>
-                  </View>
-                )}
               </View>
               <Text style={[styles.tabLabel, { color: isFocused ? '#FF937B' : 'black' }]}>{label}</Text>
               {isFocused && <View style={styles.tabIndicator} />}

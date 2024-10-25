@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { GET_PRODUCT_ORDERS } from '../../../../../../api/apiService';
+import { GET_PRODUCT_ORDERS, GET_GIF } from '../../../../../../api/apiService';
 
 const OrderSuccess = () => {
   const navigation = useNavigation();
@@ -28,16 +27,10 @@ const OrderSuccess = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-      </View>
-      
+    <View style={styles.container}>      
       <View style={styles.content}>
         <Image 
-          source={require('../../../../../../asset/image/success.png')} 
+          source={{ uri: GET_GIF('vanchuyen') }}
           style={styles.successImage}
         />
         <Text style={styles.title}>Đặt hàng thành công!</Text>
@@ -88,9 +81,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
-  },
-  header: {
-    marginBottom: 20,
   },
   content: {
     flex: 1,
