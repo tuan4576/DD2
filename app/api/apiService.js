@@ -2,8 +2,10 @@
 // let API_URL = "http://127.0.0.1:8000/api/mobile";
 // let API_URL = "http://192.168.1.10:8000/api/mobile";
 // let IMG_URL = "http://192.168.1.10:8000/img";
-let API_URL = "http://192.168.1.9:8000/api/mobile";
-let IMG_URL = "http://192.168.1.9:8000/img";
+// let API_URL = "http://192.168.1.9:8000/api/mobile";
+// let IMG_URL = "http://192.168.1.9:8000/img";
+let API_URL = "http://192.168.115.104:8000/api/mobile";
+let IMG_URL = "http://192.168.115.104:8000/img";
 
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
